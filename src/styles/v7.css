@@ -830,31 +830,6 @@
   background: var(--surface);
   color: var(--accent);
 }
-/* Connector lines into and out of the center node. */
-.hub__node::after {
-  content: "";
-  position: absolute;
-  top: 50%;
-  width: 37px;
-  height: 2px;
-  background: var(--accent-line);
-  transform: scaleX(0);
-  transition: transform 0.6s var(--ease);
-}
-.hub__node--in::after {
-  left: 100%;
-  transform-origin: left;
-}
-.hub__node--out::after {
-  right: 100%;
-  transform-origin: right;
-}
-.hub.is-drawn .hub__node::after {
-  transform: scaleX(1);
-}
-.hub.is-drawn .hub__node--out::after {
-  transition-delay: 0.45s;
-}
 .hub__center {
   position: relative;
   z-index: 1;
@@ -900,36 +875,6 @@
   .hub__col ul {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .hub__node::after {
-    display: none;
-  }
-  .hub__center {
-    position: relative;
-  }
-  .hub__center::before,
-  .hub__center::after {
-    content: "";
-    position: absolute;
-    left: 50%;
-    width: 2px;
-    height: 36px;
-    background: var(--accent-line);
-    transform: scaleY(0);
-    transition: transform 0.6s var(--ease);
-  }
-  .hub__center::before {
-    bottom: 100%;
-    transform-origin: top;
-  }
-  .hub__center::after {
-    top: 100%;
-    transform-origin: top;
-    transition-delay: 0.4s;
-  }
-  .hub.is-drawn .hub__center::before,
-  .hub.is-drawn .hub__center::after {
-    transform: scaleY(1);
-  }
   .hub__center small {
     max-width: none;
   }
@@ -937,9 +882,116 @@
 @media (prefers-reduced-motion: reduce) {
   .tl::after,
   .tl__n,
+  .hub__node::before,
   .hub__node::after,
   .hub__center::before,
   .hub__center::after {
     transition: none !important;
+  }
+}
+
+/* Hub connectors: a tree. Each tile has a stub to a vertical spine; each spine joins the center.
+   Pure CSS, so the diagram is complete without JavaScript. Draws in once when .is-drawn is set. */
+.hub {
+  --gap: 40px;
+  --half: calc(var(--gap) / 2);
+  --wire: 2px;
+  --wire-c: var(--accent-line);
+  column-gap: var(--gap);
+}
+.hub__node::before,
+.hub__node::after,
+.hub__center::before,
+.hub__center::after {
+  content: "";
+  position: absolute;
+  background: var(--wire-c);
+  transition: transform 0.35s var(--ease);
+}
+/* Stubs */
+.hub__node::after {
+  top: calc(50% - var(--wire) / 2);
+  width: calc(var(--half) + 1px);
+  height: var(--wire);
+  transform: scaleX(0);
+}
+.hub__node--in::after {
+  left: 100%;
+  transform-origin: left;
+}
+.hub__node--out::after {
+  right: 100%;
+  transform-origin: right;
+  transition-delay: 1.05s;
+}
+/* Spine segments (each tile draws its share, covering the 8px list gap) */
+.hub__node::before {
+  top: -5px;
+  bottom: -5px;
+  width: var(--wire);
+  transform: scaleY(0);
+  transition-delay: 0.3s;
+}
+.hub__node--in::before {
+  left: calc(100% + var(--half) - var(--wire) / 2);
+}
+.hub__node--out::before {
+  right: calc(100% + var(--half) - var(--wire) / 2);
+  transition-delay: 0.85s;
+}
+.hub__node:first-child::before {
+  top: calc(50% - var(--wire) / 2);
+}
+.hub__node:last-child::before {
+  bottom: calc(50% - var(--wire) / 2);
+}
+/* Center links to each spine */
+.hub__center::before,
+.hub__center::after {
+  top: calc(50% - var(--wire) / 2);
+  width: calc(var(--half) + 1px);
+  height: var(--wire);
+  transform: scaleX(0);
+}
+.hub__center::before {
+  right: 100%;
+  transform-origin: left;
+  transition-delay: 0.5s;
+}
+.hub__center::after {
+  left: 100%;
+  transform-origin: left;
+  transition-delay: 0.7s;
+}
+.hub.is-drawn .hub__node::before,
+.hub.is-drawn .hub__node::after,
+.hub.is-drawn .hub__center::before,
+.hub.is-drawn .hub__center::after {
+  transform: none;
+}
+/* Mobile: directory above, apps below; vertical links into and out of the center. */
+@media (max-width: 640px) {
+  .hub {
+    row-gap: var(--gap);
+  }
+  .hub__node::before,
+  .hub__node::after {
+    display: none;
+  }
+  .hub__center::before,
+  .hub__center::after {
+    top: auto;
+    right: auto;
+    left: calc(50% - var(--wire) / 2);
+    width: var(--wire);
+    height: var(--gap);
+    transform: scaleY(0);
+    transform-origin: top;
+  }
+  .hub__center::before {
+    bottom: 100%;
+  }
+  .hub__center::after {
+    top: 100%;
   }
 }
