@@ -1,7 +1,6 @@
 import { Icon } from "../components/Icon";
-import { Flag } from "../components/Flag";
 import { Shell } from "../components/Shell";
-import { useSite } from "../context";
+import { LINKS } from "../context";
 
 /**
  * /india/: the India trust and compliance content that left the homepage in v4.
@@ -10,12 +9,11 @@ import { useSite } from "../context";
 const POINTS = [
   { title: "DPDP security safeguards", body: "Access, device and data controls that support the reasonable security safeguards the DPDP Rules require." },
   { title: "RBI requirements", body: "MFA and least-privilege access for branch users, field agents and third parties." },
-  { title: "CERT-In expectations", body: "Centralised access logs and policy records to support incident reporting and review." },
+  { title: "CERT-In expectations", body: "Centralized access logs and policy records to support incident reporting and review." },
   { title: "Indian customer proof", body: "BFSI, manufacturing and public-sector customers including MS Fincap, KPFS and Gwalior Smart City." },
 ];
 
 function IndiaBody() {
-  const { openForm } = useSite();
   return (
     <>
       <section className="section subpage-hero on-dark" aria-labelledby="india-title">
@@ -25,11 +23,10 @@ function IndiaBody() {
           <p className="subpage-hero__lead">
             Show auditors who accessed which data, from which device, under which policy, with security safeguards that help
             you prepare for DPDP, RBI and CERT-In expectations.
-            <Flag id="compliance" />
           </p>
-          <button type="button" className="btn btn--accent btn--lg" data-cta="india-demo" onClick={() => openForm("demo")}>
+          <a className="btn btn--accent btn--lg" data-cta="india-demo" href={LINKS.contact}>
             Book a demo <Icon name="arrowRight" size={18} />
-          </button>
+          </a>
         </div>
       </section>
 

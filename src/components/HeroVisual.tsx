@@ -1,52 +1,47 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "./Icon";
-import { Flag } from "./Flag";
-import { useInView, usePrefersReducedMotion } from "../hooks/useInView";
+import { usePrefersReducedMotion } from "../hooks/useInView";
 import { keepTabVisible, onTabKeyDown } from "../hooks/tabKeys";
-import { simulator, shows, type Outcome, type CheckState } from "../content/homepage";
+import { simulator, type ChipState, type Outcome } from "../content/homepage";
 
 /**
  * Interactive access simulator (Illustrative UI, fictional data).
- * One person, one resource; switching the device changes the checks, the
- * decision and what the person can do with the data. Auto-plays through the
- * device tabs every 4s while in view, until the visitor picks a tab.
+ * One person, one resource. Each device tab updates the chips, the decision,
+ * the reason line and the three action rows. No autoplay.
+ * Desktop opens on "Company laptop", mobile on "Failing checks" (set after mount,
+ * so the prerendered HTML and the first client render match).
  */
 
-const SCENARIOS = simulator.scenarios.filter(shows);
-const ACTIONS = ["open", "download", "paste"] as const;
+const SCENARIOS = simulator.scenarios;
+const ACTIONS = ["open", "usb", "paste"] as const;
 
-const OUTCOME_TONE: Record<Outcome, "ok" | "deny" | "warn"> = { allowed: "ok", blocked: "deny", view: "warn" };
-const OUTCOME_ICON: Record<Outcome, "check" | "x" | "eye"> = { allowed: "check", blocked: "x", view: "eye" };
-const CHECK_SR: Record<CheckState, string> = { pass: "passed", fail: "failed", warn: "noted" };
+const OUTCOME_TONE: Record<Outcome, "ok" | "deny"> = { allowed: "ok", blocked: "deny" };
+const OUTCOME_ICON: Record<Outcome, "check" | "x"> = { allowed: "check", blocked: "x" };
+const STATE_ICON: Record<ChipState, "check" | "x" | "alert" | "minus"> = { pass: "check", fail: "x", unknown: "alert", skip: "minus" };
+const STATE_SYMBOL: Record<ChipState, string> = { pass: "✓", fail: "✗", unknown: "?", skip: "" };
+const STATE_SR: Record<ChipState, string> = { pass: "passed", fail: "failed", unknown: "unverified", skip: "not checked" };
 
 export function HeroVisual() {
-  const [idx, setIdx] = useState(0);
-  const [autoplay, setAutoplay] = useState(true);
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { threshold: 0.3 });
+  const [idx, setIdx] = useState(simulator.defaultTab.desktop);
   const reduced = usePrefersReducedMotion();
-
-  const claim = SCENARIOS[idx];
-  const s = claim.value;
+  const tabsRef = useRef<HTMLDivElement>(null);
+  const picked = useRef(false);
 
   useEffect(() => {
-    if (!autoplay || reduced || !inView) return;
-    const t = window.setTimeout(() => setIdx((i) => (i + 1) % SCENARIOS.length), simulator.autoplayMs);
-    return () => window.clearTimeout(t);
-  }, [autoplay, reduced, inView, idx]);
-
-  const tabsRef = useRef<HTMLDivElement>(null);
+    if (!picked.current && window.matchMedia("(max-width: 767px)").matches) setIdx(simulator.defaultTab.mobile);
+  }, []);
   useEffect(() => keepTabVisible(tabsRef.current, idx, !reduced), [idx, reduced]);
 
   const choose = (i: number) => {
-    setAutoplay(false);
+    picked.current = true;
     setIdx(i);
   };
+  const s = SCENARIOS[idx];
 
   return (
-    <div className="hv" ref={ref}>
+    <div className="hv">
       <div className="hv__tabs" ref={tabsRef} role="tablist" aria-label="Device used for this access request">
-        {SCENARIOS.map(({ value: sc }, i) => (
+        {SCENARIOS.map((sc, i) => (
           <button
             key={sc.id}
             id={`hv-tab-${sc.id}`}
@@ -60,7 +55,7 @@ export function HeroVisual() {
             onClick={() => choose(i)}
             onKeyDown={(e) => onTabKeyDown(e, i, SCENARIOS.length, choose)}
           >
-            <Icon name={sc.id === "unknown" ? "alert" : "laptop"} size={15} />
+            <Icon name={sc.icon} size={15} />
             {sc.tab}
           </button>
         ))}
@@ -75,59 +70,30 @@ export function HeroVisual() {
         </div>
 
         <div className="hv__body" key={s.id}>
-          <div className="hv__row hv__row--subjects">
-            <div className="hv__card">
-              <span className="hv__label">Person</span>
-              <div className="hv__subject">
-                <span className="hv__avatar" aria-hidden="true">
-                  {simulator.person.initials}
-                </span>
-                <div>
-                  <strong>{simulator.person.name}</strong>
-                  <span>{simulator.person.role}</span>
-                </div>
-              </div>
-            </div>
-            <div className="hv__card">
-              <span className="hv__label">Device</span>
-              <div className="hv__device">
-                <Icon name={s.id === "unknown" ? "alert" : "laptop"} size={18} />
-                <div>
-                  <strong>{s.device.name}</strong>
-                </div>
-                <span className={`chip chip--${s.device.tone} hv__trust`}>{s.device.status}</span>
-              </div>
-            </div>
+          <div className="hv__who">
+            <span className="hv__avatar" aria-hidden="true">
+              {simulator.person.initials}
+            </span>
+            <span>
+              <strong>{simulator.person.name}</strong>
+              <span>{simulator.person.role}</span>
+            </span>
+            <ul className="hv__chips" aria-label="Checks summary">
+              {s.chips.map((c) => (
+                <li key={c.label} className={`hv__chip is-${c.state}`}>
+                  {c.text ?? `${c.label} ${STATE_SYMBOL[c.state]}`}
+                  <span className="sr-only">, {STATE_SR[c.state]}</span>
+                </li>
+              ))}
+            </ul>
           </div>
 
-          <ol className="hv__checks" aria-label="Checks">
-            {s.checks.map((c, i) => (
-              <li key={c.label} className={`hv__check is-${c.state}`} style={{ animationDelay: `${i * 60}ms` }}>
-                <span className="hv__check-icon" aria-hidden="true">
-                  <Icon name={c.state === "pass" ? "check" : c.state === "fail" ? "x" : "alert"} size={13} strokeWidth={2.5} />
-                </span>
-                <span>{c.label}</span>
-                <span className="sr-only">, {CHECK_SR[c.state]}</span>
-              </li>
-            ))}
-          </ol>
-
-          <div className="hv__row hv__row--decision">
-            <div className="hv__policy is-on">
-              <span className="hv__label">Policy evaluated</span>
-              <code>
-                {s.policy.map((p) => (
-                  <span key={p}>{p}</span>
-                ))}
-              </code>
-            </div>
-            <div className={`hv__decision is-on tone-${s.decision.tone}`}>
-              <span className="hv__label">Decision</span>
-              <strong>
-                {s.decision.label}
-                <Flag claim={claim} />
-              </strong>
-            </div>
+          <div className={`hv__verdict tone-${s.decision.tone}`}>
+            <span className={`hv__badge chip chip--${s.decision.tone}`}>
+              <Icon name={s.decision.tone === "ok" ? "check" : "x"} size={13} strokeWidth={2.5} />
+              {s.decision.label}
+            </span>
+            <p className="hv__reason">{s.reason}</p>
           </div>
 
           <ul className="hv__actions is-on" aria-label={`What ${simulator.person.name} can do`}>
@@ -144,10 +110,40 @@ export function HeroVisual() {
               );
             })}
           </ul>
+
+          {/* Native disclosure: works by keyboard and without JavaScript. */}
+          <details className="hv__details">
+            <summary data-interaction="hero-simulator-details">
+              <span className="hv__details-show">{simulator.detailsLabels.show}</span>
+              <span className="hv__details-hide">{simulator.detailsLabels.hide}</span>
+              <Icon name="chevronDown" size={16} />
+            </summary>
+            <div className="hv__details-body">
+              <ol className="hv__checks" aria-label={simulator.detailsLabels.checks}>
+                {s.checks.map((c) => (
+                  <li key={c.label} className={`hv__check is-${c.state}`}>
+                    <span className="hv__check-icon" aria-hidden="true">
+                      <Icon name={STATE_ICON[c.state]} size={13} strokeWidth={2.5} />
+                    </span>
+                    <span>{c.label}</span>
+                    <span className="sr-only">, {STATE_SR[c.state]}</span>
+                  </li>
+                ))}
+              </ol>
+              <div className="hv__policy is-on">
+                <span className="hv__label">{simulator.detailsLabels.policy}</span>
+                <code>
+                  {s.policy.map((p) => (
+                    <span key={p}>{p}</span>
+                  ))}
+                </code>
+              </div>
+            </div>
+          </details>
         </div>
 
         <p className="sr-only" aria-live="polite">
-          {`${s.tab}: ${s.decision.label}. ${ACTIONS.map((a) => `${simulator.actionLabels[a]}: ${simulator.outcomeLabels[s.actions[a]]}`).join(". ")}.`}
+          {`${s.tab}: ${s.decision.label}. ${s.reason}`}
         </p>
       </div>
     </div>

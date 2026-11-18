@@ -1,15 +1,15 @@
 import { useEffect, useRef } from "react";
 import { Icon } from "./Icon";
-import { Flag } from "./Flag";
+import { LINKS } from "../context";
 import { hero } from "../content/homepage";
 
 /**
  * Accessible video modal (native <dialog>: focus trap, Esc to close).
- * The player iframe is only mounted while open, so nothing loads up front.
+ * Everything inside (title and player) mounts only while open, so nothing loads or duplicates up front.
  */
 export function VideoModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
-  const url = hero.videoEmbedUrl.value;
+  const url = hero.videoEmbedUrl;
 
   useEffect(() => {
     const d = ref.current;
@@ -26,18 +26,19 @@ export function VideoModal({ open, onClose }: { open: boolean; onClose: () => vo
       onClose={onClose}
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
+      {/* Content mounts only while open, so the closed dialog adds no duplicate "Watch" text to the page. */}
+      {open && (
       <div className="video-modal__inner">
         <div className="video-modal__head">
           <p className="video-modal__title" id="video-modal-title">
             {hero.videoCta}
-            <Flag claim={hero.videoEmbedUrl} />
           </p>
           <button type="button" className="video-modal__close" aria-label="Close video" onClick={onClose} data-interaction="hero-video-close">
             <Icon name="x" size={20} />
           </button>
         </div>
         <div className="video-modal__frame">
-          {open && url ? (
+          {url ? (
             <iframe
               src={`${url}${url.includes("?") ? "&" : "?"}autoplay=1&rel=0`}
               title={hero.videoCta}
@@ -45,12 +46,16 @@ export function VideoModal({ open, onClose }: { open: boolean; onClose: () => vo
               loading="lazy"
             />
           ) : (
-            <div className="video-modal__slot" aria-hidden="true">
-              <Icon name="play" size={40} />
+            <div className="video-modal__slot">
+              <a href={LINKS.youtube} target="_blank" rel="noopener" data-interaction="hero-video-channel">
+                <Icon name="play" size={40} />
+                <span>Watch on YouTube</span>
+              </a>
             </div>
           )}
         </div>
       </div>
+      )}
     </dialog>
   );
 }

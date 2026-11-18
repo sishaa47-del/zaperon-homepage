@@ -7,8 +7,14 @@ export function sitePath(path: string) {
 }
 
 /** True on the homepage. Section anchors need the homepage path on the India and security pages. */
+let serverIsHome = true;
+/** Prerender only: which page is being rendered (there is no window on the server). */
+export function setServerPage(home: boolean) {
+  serverIsHome = home;
+}
+
 export function isHome() {
-  if (typeof window === "undefined") return true;
+  if (typeof window === "undefined") return serverIsHome;
   const p = window.location.pathname;
   return p === BASE || p === `${BASE}index.html`;
 }

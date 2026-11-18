@@ -1,36 +1,12 @@
 import { Icon } from "./Icon";
-import { Flag } from "./Flag";
 import { LINKS } from "../context";
 import { homeHref } from "../paths";
-import { footer, shows, useCases } from "../content/homepage";
+import { footer, solutions } from "../content/homepage";
 
 type L = { label: string; href: string };
 const COLS: { title: string; links: L[] }[] = [
-  {
-    title: "Platform",
-    links: [
-      { label: "How it works", href: "#how-it-works" },
-      { label: "Who gets in", href: "#who-gets-in" },
-      { label: "What data gets out", href: "#what-data-gets-out" },
-      { label: "AI governance", href: "#ai-governance" },
-      { label: "Integrations", href: "#integrations" },
-    ],
-  },
-  {
-    title: "Solutions",
-    links: useCases.cases.map((c) => ({ label: c.title.replace(/\.$/, ""), href: c.href })),
-  },
-  {
-    // Industry pages are not live on zaperon.com yet (VALIDATION.md).
-    title: "Industries",
-    links: [
-      { label: "Banking & NBFCs", href: LINKS.solutions },
-      { label: "Manufacturing", href: LINKS.solutions },
-      { label: "Public sector", href: LINKS.solutions },
-      { label: "Healthcare", href: LINKS.solutions },
-      { label: "IT & ITeS", href: LINKS.solutions },
-    ],
-  },
+  { title: "Platform", links: footer.platform },
+  { title: "Solutions", links: solutions.map((c) => ({ label: c.label, href: c.href })) },
   {
     title: "Resources",
     links: [
@@ -44,7 +20,6 @@ const COLS: { title: string; links: L[] }[] = [
   {
     title: "Company",
     links: [
-      { label: "Security", href: "/security/" },
       { label: "Zaperon in India", href: "/india/" },
       { label: "Partners", href: LINKS.partners },
       { label: "Contact", href: LINKS.contact },
@@ -63,12 +38,6 @@ export function Footer() {
           <div className="footer__brand">
             <img src={LINKS.logo} alt="Zaperon" width="132" height="28" loading="lazy" />
             <p>{footer.tagline}</p>
-            {shows(footer.soc2) && (
-              <p className="footer__soc">
-                <Icon name="clipboard" size={16} /> {footer.soc2.value}
-                <Flag claim={footer.soc2} />
-              </p>
-            )}
             <div className="footer__social">
               <a href={LINKS.linkedin} target="_blank" rel="noopener" aria-label="Zaperon on LinkedIn">
                 <Icon name="linkedin" size={20} />
@@ -114,24 +83,23 @@ export function Footer() {
         </div>
 
         <div className="footer__legal">
-          <div>
-            <p>© 2026 Finlock Technologies Private Limited. All rights reserved.</p>
-            <p>
-              Zaperon is a product of Finlock Technologies Private Limited, India. Zaperon, Inc. is the authorized sales and
-              marketing entity in the United States.
-            </p>
-          </div>
-          <ul>
+          <ul className="footer__bottom">
+            <li className="footer__soc">
+              <Icon name="clipboard" size={16} /> {footer.soc2}
+            </li>
             <li>
-              <a href={LINKS.privacy} target="_blank" rel="noopener">
-                Privacy Policy
+              <a href={footer.compliance.href} target="_blank" rel="noopener" data-interaction="footer-compliance">
+                {footer.compliance.label}
               </a>
             </li>
             <li>
-              <a href={LINKS.terms} target="_blank" rel="noopener">
-                Terms & Conditions
+              <a href={footer.privacy.href} target="_blank" rel="noopener" data-interaction="footer-privacy">
+                {footer.privacy.label}
               </a>
             </li>
+            {footer.entities.map((e) => (
+              <li key={e}>{e}</li>
+            ))}
           </ul>
         </div>
       </div>

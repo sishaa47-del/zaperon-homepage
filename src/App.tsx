@@ -1,16 +1,15 @@
 import { Shell } from "./components/Shell";
 import { Hero } from "./components/Hero";
 import { Proof } from "./components/Proof";
-import { Problem } from "./components/Problem";
-import { HowItWorks } from "./components/HowItWorks";
-import { Difference } from "./components/Difference";
-import { PillarAccess, PillarData } from "./components/Pillars";
+import { WhyNow } from "./components/WhyNow";
 import { AIGovernance } from "./components/AIGovernance";
-import { Differentiation } from "./components/Differentiation";
-import { UseCases } from "./components/UseCases";
-import { CustomerProof } from "./components/CustomerProof";
-import { Deployment, FAQ, FinalCTA, Integrations } from "./components/Closing";
-import { faq, seo } from "./content/homepage";
+import { Workday } from "./components/Workday";
+import { Platform } from "./components/Pillars";
+import { Outcomes } from "./components/Outcomes";
+import { Integration } from "./components/Integration";
+import { FAQ, FinalCTA } from "./components/Closing";
+import { seo } from "./content/homepage";
+import "./styles/v7.css";
 
 /** SoftwareApplication structured data. FAQPage is rendered by <FAQ /> from the visible items. */
 const appLd = {
@@ -23,27 +22,21 @@ const appLd = {
   description: seo.appDescription,
 };
 
+/** v7: announcement and footer (in Shell) plus ten homepage sections. */
 export default function App() {
-  // The "What is Zaperon?" answer is needs-validation; keep the description in step with what renders.
-  const ld = faq.items[0].status === "hold" ? { ...appLd, description: seo.description } : appLd;
   return (
     <Shell>
       <Hero />
       <Proof />
-      <Problem />
-      <HowItWorks />
-      <Difference />
-      <PillarAccess />
-      <PillarData />
+      <WhyNow />
       <AIGovernance />
-      <Differentiation />
-      <UseCases />
-      <CustomerProof />
-      <Integrations />
-      <Deployment />
+      <Workday />
+      <Platform />
+      <Outcomes />
+      <Integration />
       <FAQ />
       <FinalCTA />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(appLd) }} />
     </Shell>
   );
 }

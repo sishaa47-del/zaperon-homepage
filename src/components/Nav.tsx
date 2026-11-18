@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { announcement, useCases } from "../content/homepage";
+import { announcement, modules, solutions } from "../content/homepage";
 import { Icon, type IconName } from "./Icon";
-import { LINKS, useSite } from "../context";
+import { LINKS } from "../context";
 import { homeHref } from "../paths";
-import { Flag } from "./Flag";
 import "../styles/nav.css";
 
 type MenuItem = { label: string; desc?: string; href: string; icon?: IconName; external?: boolean };
@@ -14,31 +13,19 @@ const MENUS: Menu[] = [
     id: "platform",
     label: "Platform",
     items: [
-      { label: "Identity & passwordless", desc: "SSO, MFA and phishing-resistant login", href: "#who-passwordless", icon: "fingerprint" },
-      { label: "Zero Trust Access", desc: "Per-app access that replaces the VPN", href: "#who-apps", icon: "route" },
-      { label: "Data protection", desc: "Endpoint, web and email DLP", href: "#data-exits", icon: "file" },
-      { label: "Web & SaaS security", desc: "Web filtering and Shadow IT control", href: "#what-data-gets-out", icon: "globe" },
-      { label: "AI governance", desc: "Shadow AI discovery and prompt protection", href: "#ai-governance", icon: "chat" },
+      { label: "AI & agent security", desc: "Know who's using AI. Control what data it gets.", href: "#ai-security", icon: "chat" },
+      { label: "One platform", desc: "From the first sign-in to the last AI action", href: "#one-platform", icon: "layers" },
+      ...modules.items.map((m) => ({ label: m.name, desc: m.group, href: m.href, icon: m.icon as IconName, external: true })),
+      { label: "Integration and deployment", desc: "Fits the stack you already run", href: "#deployment", icon: "plug" },
     ],
-    feature: { kicker: "How it works", title: "Three questions. One connected decision.", href: "#how-it-works", cta: "See the flow" },
+    feature: { kicker: "Platform", title: "Four modules. One platform.", href: "#platform", cta: "Explore the modules" },
   },
   {
     id: "solutions",
     label: "Solutions",
-    items: useCases.cases.map((c) => ({ label: c.title.replace(/\.$/, ""), href: `#uc-${c.id}`, icon: c.icon as IconName })),
+    // Each item opens its use-case page on zaperon.com.
+    items: solutions.map((c) => ({ label: c.label, href: c.href, icon: c.icon as IconName, external: true })),
     feature: { kicker: "All solutions", title: "Explore every Zaperon use case", href: LINKS.solutions, cta: "View solutions" },
-  },
-  {
-    // Industry pages are not live on zaperon.com yet; these point to the solutions hub (see VALIDATION.md).
-    id: "industries",
-    label: "Industries",
-    items: [
-      { label: "Banking & NBFCs", desc: "Branch users and field agents", href: LINKS.solutions, icon: "bank", external: true },
-      { label: "Manufacturing", desc: "Designs, source code and supplier access", href: LINKS.solutions, icon: "factory", external: true },
-      { label: "Public sector", desc: "Distributed staff and citizen data", href: LINKS.solutions, icon: "landmark", external: true },
-      { label: "Healthcare", desc: "Patient data across shared devices", href: LINKS.solutions, icon: "heart", external: true },
-      { label: "IT & ITeS", desc: "Offshore teams and client environments", href: LINKS.solutions, icon: "code", external: true },
-    ],
   },
   {
     id: "resources",
@@ -89,7 +76,6 @@ function MenuLink({ item, onNavigate }: { item: MenuItem; onNavigate: () => void
 }
 
 export function Nav() {
-  const { openForm } = useSite();
   const [open, setOpen] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mobileSection, setMobileSection] = useState<string | null>(null);
@@ -211,14 +197,13 @@ export function Nav() {
         <div className="site-nav__actions">
           <a className="site-nav__text-link" href={LINKS.login} target="_blank" rel="noopener" data-interaction="nav-login">
             Login
-            <Flag id="login" />
           </a>
-          <button type="button" className="site-nav__text-link" data-interaction="nav-contact-sales" onClick={() => openForm("sales")}>
+          <a className="site-nav__text-link" href={LINKS.contact} data-interaction="nav-contact-sales">
             Contact sales
-          </button>
-          <button type="button" className="btn btn--accent btn--sm" data-cta="nav-demo" onClick={() => openForm("demo")}>
+          </a>
+          <a className="btn btn--accent btn--sm" href={LINKS.contact} data-cta="nav-demo">
             Book a demo
-          </button>
+          </a>
         </div>
 
         <button
@@ -263,27 +248,12 @@ export function Nav() {
             ))}
           </ul>
           <div className="mobile-menu__actions">
-            <button
-              type="button"
-              className="btn btn--accent btn--lg"
-              data-cta="nav-demo-mobile"
-              onClick={() => {
-                closeAll();
-                openForm("demo");
-              }}
-            >
+            <a className="btn btn--accent btn--lg" href={LINKS.contact} data-cta="nav-demo-mobile">
               Book a demo
-            </button>
-            <button
-              type="button"
-              className="btn btn--ghost btn--lg"
-              onClick={() => {
-                closeAll();
-                openForm("sales");
-              }}
-            >
+            </a>
+            <a className="btn btn--ghost btn--lg" href={LINKS.contact} data-interaction="nav-contact-sales-mobile">
               Contact sales
-            </button>
+            </a>
             <a className="mobile-menu__login" href={LINKS.login} target="_blank" rel="noopener">
               Login
             </a>
@@ -303,7 +273,7 @@ export function AnnouncementBar() {
         <p>
           <strong>{announcement.lead}</strong> {announcement.text}{" "}
           <a href={announcement.href} target="_blank" rel="noopener" data-interaction="announcement-link">
-            {announcement.linkText} <Icon name="arrowRight" size={14} />
+            {announcement.linkText}
           </a>
         </p>
         <button type="button" className="announce__close" aria-label="Dismiss announcement" onClick={() => setHidden(true)}>

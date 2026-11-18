@@ -37,46 +37,30 @@ Stack: Vite + React 19 + TypeScript and plain CSS (design tokens in `src/index.c
 
 Brand terms follow zaperon.com: "Zero Trust Access" for the pillar, "Zero Trust access" in running text, and "Shadow AI" / "Shadow IT". The one exception is the hero headline, which keeps the brief's wording.
 
-## Page structure (`src/App.tsx`, v4)
+## Page structure (`src/App.tsx`, v7)
 
-All copy lives in `src/content/homepage.ts`. Each claim has a status: `confirmed` renders, `needs-validation` renders with a `// VALIDATE:` note and is listed in `VALIDATION.md`, `hold` does not render.
+All copy lives in `src/content/homepage.ts` and is final (no review flags in v7).
 
 | # | Section | Component | Interaction |
 |---|---|---|---|
-| 1 | Announcement bar, nav | `Nav.tsx` | Dropdowns, mobile drawer |
-| 2 | Hero + access simulator | `Hero.tsx`, `HeroVisual.tsx`, `VideoModal.tsx` | Scenario tabs (arrow keys), auto-play until clicked, video modal |
-| 3 | Proof bar | `Proof.tsx` | Logo marquee |
-| 4 | Problem | `Problem.tsx` | Hover and focus cards |
-| 5 | How it works | `HowItWorks.tsx` | Three steps that follow scroll, drawn wires |
-| 6 | Difference + demo strip | `Difference.tsx` | "Change one condition" toggle |
-| 7 | Pillar 1, Who gets in | `Pillars.tsx` | Tab explorer |
-| 8 | Pillar 2, What data gets out | `Pillars.tsx` | Tab explorer, channel states |
-| 9 | AI spotlight | `AIGovernance.tsx` | Prompt demo, account switch |
-| 10 | Comparison | `Differentiation.tsx` | Rows reveal in turn |
-| 11 | Use cases | `UseCases.tsx` | Tile tablist with detail panel |
-| 12 | Customer proof | `CustomerProof.tsx` | |
-| 13 | Integrations | `Closing.tsx` | |
-| 14 | Deployment | `Closing.tsx` | Progress line fills step by step |
-| 15 | FAQ | `Closing.tsx` | Accordion, one open at a time, FAQPage JSON-LD |
-| 16 | Final CTA | `Closing.tsx` | |
-| 17 | Footer | `Footer.tsx` | |
+| 0 | Announcement bar | `Nav.tsx` (`AnnouncementBar`) | Dismiss |
+| 1 | Hero + access simulator | `Hero.tsx`, `HeroVisual.tsx`, `VideoModal.tsx` | Device tabs (arrow keys), native "See details", video modal |
+| 2 | Proof bar | `Proof.tsx` | Logo marquee (pauses on hover, static under reduced motion) |
+| 3 | Why now | `WhyNow.tsx` | Static stats with source links |
+| 4 | AI & agent security | `AIGovernance.tsx` | Two-tab demo: employee prompt (account toggle, typing) and agent action |
+| 5 | One platform (workday strip) | `Workday.tsx` | Without / With toggle, progress bar |
+| 6 | Four modules | `Pillars.tsx` (`Platform`) | Tabs on desktop, accordion on mobile |
+| 7 | What changes for your team | `Outcomes.tsx` | Hidden metric slots |
+| 8 | Integration and deployment | `Integration.tsx`, `Logo.tsx` | Timeline and hub lines draw in once |
+| 9 | FAQ | `Closing.tsx` | Accordion, FAQPage JSON-LD |
+| 10 | Final CTA | `Closing.tsx` | |
+| 11 | Footer | `Footer.tsx` | |
 
-Extra pages: `/india/` (`src/pages/India.tsx`) and `/security/` (`src/pages/Security.tsx`, noindex placeholder). All pages share `components/Shell.tsx`.
+Extra pages: `/india/` and `/security/` (noindex placeholder, no longer linked). All pages share `components/Shell.tsx`.
 
-Reduced motion: no auto-play or typing; every demo shows its final state. Controls carry `data-interaction`; CTAs carry `data-cta` (hero-primary, hero-video, mid-page-demo, final-primary, final-security).
+**Prerendered.** `npm run build` also builds `src/entry-server.tsx` and runs `scripts/prerender.mjs`, which writes each page's HTML into `dist/`. The client hydrates it. Without JavaScript every section, FAQ answer, demo panel and module card is readable.
 
-## Claims review mode
-
-Add `?review=1` to the URL. Every claim that Zaperon needs to confirm shows a yellow **⚑ Validate** flag, and a panel lists all of them. The full list is in `VALIDATION.md`. Older items still in `src/data/claims.ts`:
-
-- SOC 2 report type
-- No separate MDM required
-- Extent of AI prompt inspection and enforcement
-- Regulatory wording (DPDP / RBI / CERT-In: "helps you prepare for", never "compliant")
-- Assessment offer and timeline (new proposal)
-- One policy engine across access, web, data and AI (vendor claim)
-- ~40% cost reduction (customer-stated, n=1)
-- Login destination (no public admin-console URL found; it currently points to the docs)
+Reduced motion: no typing, line-draw or bar animation; demos show their final state. Controls carry `data-interaction`; CTAs carry `data-cta`.
 
 ## Content guardrails applied
 

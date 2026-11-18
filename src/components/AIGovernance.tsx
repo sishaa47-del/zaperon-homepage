@@ -1,74 +1,67 @@
 import { useEffect, useRef, useState } from "react";
-import { Icon, type IconName } from "./Icon";
+import { Icon } from "./Icon";
 import { Reveal } from "./Reveal";
-import { Flag } from "./Flag";
-import { useInView, usePrefersReducedMotion } from "../hooks/useInView";
+import { useInView, useMounted, usePrefersReducedMotion } from "../hooks/useInView";
 import { onTabKeyDown } from "../hooks/tabKeys";
-import { aiSpotlight as A, shows } from "../content/homepage";
+import { aiSecurity as A } from "../content/homepage";
 
-type Account = "personal" | "company";
-type Stage = "typing" | "inspecting" | "detecting" | "verdict";
+const D = A.demo;
+type Account = "company" | "personal";
 const ACCOUNTS: Account[] = ["company", "personal"];
-const demo = A.demo;
+const TABS = ["prompt", "agent"] as const;
+type Tab = (typeof TABS)[number];
 
 /**
- * Illustrative prompt-inspection demo (fictional data). Types a prompt,
- * highlights detected items one by one, then shows the verdict for the
- * selected account. Loops personal / company until the visitor picks one.
+ * Plays a short sequence once per `run` while `active` and in view.
+ * Starts (and, under reduced motion or interruption, ends) in the final state,
+ * so prerendered HTML and no-JS visitors see the complete demo.
  */
-function PromptDemo() {
+function useSequence(total: number, stepMs: number, active: boolean, run: number) {
   const ref = useRef<HTMLDivElement>(null);
   const inView = useInView(ref, { threshold: 0.4 });
   const reduced = usePrefersReducedMotion();
-  const [account, setAccount] = useState<Account>("personal");
-  const [auto, setAuto] = useState(true);
-  const [run, setRun] = useState(0);
-  const [raw, setRaw] = useState<{ typed: number; stage: Stage; found: number }>({ typed: 0, stage: "typing", found: 0 });
-  // Reduced motion: no typing, show the final state.
-  const st = reduced ? { typed: demo.prompt.length, stage: "verdict" as Stage, found: demo.detections.length } : raw;
+  const [n, setN] = useState(total);
+  const played = useRef(-1);
 
   useEffect(() => {
-    if (!inView || reduced) return;
-    const timers: number[] = [];
+    if (!active || !inView || reduced || played.current === run) return;
+    played.current = run;
     let i = 0;
-    const typer = window.setInterval(() => {
-      i += 2;
-      setRaw({ typed: Math.min(i, demo.prompt.length), stage: "typing", found: 0 });
-      if (i >= demo.prompt.length) {
-        window.clearInterval(typer);
-        setRaw((r) => ({ ...r, stage: "inspecting" }));
-        demo.detections.forEach((_, k) => {
-          timers.push(window.setTimeout(() => setRaw((r) => ({ ...r, stage: "detecting", found: k + 1 })), 500 + k * 300));
-        });
-        timers.push(window.setTimeout(() => setRaw((r) => ({ ...r, stage: "verdict" })), 500 + demo.detections.length * 300 + 250));
-      }
-    }, 26);
+    setN(0);
+    const t = window.setInterval(() => {
+      i += 1;
+      setN(i);
+      if (i >= total) window.clearInterval(t);
+    }, stepMs);
     return () => {
-      window.clearInterval(typer);
-      timers.forEach((t) => window.clearTimeout(t));
+      window.clearInterval(t);
+      setN(total);
     };
-  }, [inView, reduced, run]);
+  }, [active, inView, reduced, run, total, stepMs]);
 
-  // Loop: after each verdict, switch account and replay, until the visitor takes over.
-  useEffect(() => {
-    if (!auto || reduced || !inView || st.stage !== "verdict") return;
-    const t = window.setTimeout(() => {
-      setAccount((a) => (a === "personal" ? "company" : "personal"));
-      setRun((r) => r + 1);
-    }, 3200);
-    return () => window.clearTimeout(t);
-  }, [auto, reduced, inView, st.stage]);
+  return { ref, n, done: n >= total };
+}
+
+function PromptDemo({ active }: { active: boolean }) {
+  const p = D.prompt;
+  const [account, setAccount] = useState<Account>("personal");
+  const [run, setRun] = useState(0);
+  // Typing: 2 characters per tick; then one tick per detected item, then the result.
+  const typeTicks = Math.ceil(p.text.length / 2);
+  const total = typeTicks + p.chips.length + 1;
+  const { ref, n, done } = useSequence(total, 26, active, run);
+  const typed = Math.min(n * 2, p.text.length);
+  const found = Math.max(0, Math.min(p.chips.length, n - typeTicks));
+  const blocked = account === "personal";
 
   const choose = (i: number) => {
-    setAuto(false);
     setAccount(ACCOUNTS[i]);
     setRun((r) => r + 1);
   };
 
-  const blocked = account === "personal";
   return (
-    <div className="pd" ref={ref}>
-      <div className="pd__switch" role="radiogroup" aria-label="AI account type">
+    <div className="aid__pane" ref={ref}>
+      <div className="aid__switch" role="radiogroup" aria-label="AI account type">
         {ACCOUNTS.map((a, i) => (
           <button
             key={a}
@@ -80,103 +73,187 @@ function PromptDemo() {
             onClick={() => choose(i)}
             onKeyDown={(e) => onTabKeyDown(e, i, ACCOUNTS.length, choose)}
           >
-            {demo.toggle[a]}
+            {p.toggle[a]}
           </button>
         ))}
       </div>
-      <div className="pd__bar">
-        <span>
-          <Icon name="chat" size={15} /> {demo.app}
+      <div className="aid__card">
+        <span className="aid__who">
+          <Icon name="chat" size={15} /> {p.app} · {p.toggle[account]}
         </span>
-        <span className="illustrative">{demo.label}</span>
+        <p className="aid__prompt">
+          {p.text.slice(0, typed)}
+          {typed < p.text.length && <span className="aid__caret" aria-hidden="true" />}
+        </p>
       </div>
-      <div className="pd__body">
-        <div className="pd__input">
-          <span className="pd__who">{demo.toggle[account]}</span>
-          <p>
-            {demo.prompt.slice(0, st.typed)}
-            {st.stage === "typing" && <span className="pd__caret" aria-hidden="true" />}
-          </p>
+      <div className={`aid__gate ${done ? (blocked ? "is-blocked" : "is-redacted") : ""}`}>
+        <span className="aid__gate-title">
+          <Icon name="layers" size={15} /> {p.gateway}
+        </span>
+        <ul className="aid__chips" aria-label="Detected">
+          {p.chips.map((c, i) => (
+            <li key={c} className={`chip ${i < found ? "chip--deny is-lit" : "aid__chip-off"}`}>
+              {c}
+            </li>
+          ))}
+        </ul>
+        <div aria-live="polite" className="aid__result">
+          {done && (
+            <>
+              <span className={`chip ${blocked ? "chip--deny" : "chip--warn"} aid__decision`}>
+                <Icon name={blocked ? "x" : "eye"} size={12} strokeWidth={2.5} />
+                {blocked ? D_BLOCK : D_REDACT}
+              </span>
+              {blocked && <p>{p.result}</p>}
+            </>
+          )}
         </div>
+      </div>
+    </div>
+  );
+}
+// Decision words come from the decision line (Allow · Redact · Block · Ask a human · Audit).
+const D_REDACT = A.decisions[1];
+const D_BLOCK = A.decisions[2];
 
-        <div className={`pd__gate is-${st.stage} ${st.stage === "verdict" ? (blocked ? "is-blocked" : "is-allowed") : ""}`}>
-          <span className="pd__gate-title">
-            <Icon name="layers" size={15} /> {demo.gateway}
-          </span>
-          {st.stage === "typing" && <span className="pd__gate-msg">{demo.waiting}</span>}
-          {st.stage === "inspecting" && (
-            <span className="pd__gate-msg">
-              <span className="hv__spinner" aria-hidden="true" /> {demo.inspecting}
+function AgentDemo({ active }: { active: boolean }) {
+  const g = D.agent;
+  const [run, setRun] = useState(0);
+  const { ref, n, done } = useSequence(g.steps.length + 1, 650, active, run);
+  return (
+    <div className="aid__pane" ref={ref}>
+      <div className="aid__card">
+        <span className="aid__who">
+          <Icon name="plug" size={15} /> {g.app}
+        </span>
+        <p className="aid__prompt">{g.request}</p>
+      </div>
+      <ol className="aid__steps">
+        {g.steps.map((s, i) => (
+          <li key={s} className={i < n ? "is-lit" : ""}>
+            <span className="aid__step-n" aria-hidden="true">
+              {i < n ? <Icon name={i === g.steps.length - 1 ? "users" : "check"} size={13} strokeWidth={2.5} /> : i + 1}
             </span>
-          )}
-          {st.found > 0 && (
-            <ul className="pd__findings" aria-label="Detected">
-              {demo.detections.slice(0, st.found).map((d) => (
-                <li key={d} className="chip chip--deny">
-                  {d}
-                </li>
-              ))}
-            </ul>
-          )}
-          <div aria-live="polite">
-            {st.stage === "verdict" && (
-              <>
-                <p className={`pd__verdict ${blocked ? "" : "pd__verdict--ok"}`}>
-                  <Icon name={blocked ? "x" : "check"} size={16} strokeWidth={2.5} />
-                  {blocked ? demo.personalVerdict : demo.companyVerdict.value}
-                  {!blocked && <Flag claim={demo.companyVerdict} />}
-                </p>
-                <p className="pd__policy">{demo.policy}</p>
-              </>
-            )}
-          </div>
-        </div>
-        {st.stage === "verdict" && !reduced && (
-          <button type="button" className="pd__replay" data-interaction="ai-demo-replay" onClick={() => setRun((r) => r + 1)}>
-            <Icon name="refresh" size={14} /> Replay
-          </button>
+            {s}
+          </li>
+        ))}
+      </ol>
+      <div aria-live="polite" className="aid__result aid__result--wait">
+        {done && (
+          <p>
+            <span className="hv__spinner" aria-hidden="true" /> {g.result}
+          </p>
         )}
+      </div>
+      {done && (
+        <button type="button" className="aid__replay" data-interaction="ai-demo-agent-replay" onClick={() => setRun((r) => r + 1)}>
+          <Icon name="refresh" size={14} /> Replay
+        </button>
+      )}
+    </div>
+  );
+}
+
+function Demo() {
+  const [tab, setTab] = useState<Tab>("prompt");
+  const mounted = useMounted();
+  const choose = (i: number) => setTab(TABS[i]);
+  return (
+    <div className="aid">
+      <div className="aid__bar">
+        <div className="aid__tabs" role="tablist" aria-label="AI security demo">
+          {TABS.map((t, i) => (
+            <button
+              key={t}
+              id={`aid-tab-${t}`}
+              type="button"
+              role="tab"
+              aria-selected={tab === t}
+              aria-controls={`aid-panel-${t}`}
+              tabIndex={tab === t ? 0 : -1}
+              data-interaction={`ai-demo-tab-${t}`}
+              onClick={() => choose(i)}
+              onKeyDown={(e) => onTabKeyDown(e, i, TABS.length, choose)}
+            >
+              {D.tabs[t]}
+            </button>
+          ))}
+        </div>
+        <span className="illustrative">{D.label}</span>
+      </div>
+      {/* Before hydration (and without JavaScript) both panels show. */}
+      <div id="aid-panel-prompt" role="tabpanel" aria-labelledby="aid-tab-prompt" hidden={mounted && tab !== "prompt"}>
+        <PromptDemo active={tab === "prompt"} />
+      </div>
+      <div id="aid-panel-agent" role="tabpanel" aria-labelledby="aid-tab-agent" hidden={mounted && tab !== "agent"}>
+        <AgentDemo active={tab === "agent"} />
       </div>
     </div>
   );
 }
 
+/** Section 4: AI & agent security. */
 export function AIGovernance() {
+  const c = A.columns;
   return (
-    <section className="section ai on-dark" id="ai-governance" aria-labelledby="ai-title">
-      <div className="container ai__inner">
-        <Reveal className="ai__copy">
+    <section className="section ai on-dark" id="ai-security" aria-labelledby="ai-title">
+      <span id="ai-governance" className="anchor-alias" aria-hidden="true" />
+      <div className="container ai7">
+        <Reveal className="ai7__copy">
           <p className="eyebrow eyebrow--dark">{A.eyebrow}</p>
-          <h2 id="ai-title">
-            {A.h2Lead} <span className="serif">{A.h2Accent}</span> {A.h2Tail}
-          </h2>
-          <p className="ai__lead">{A.body}</p>
-          <ul className="ai__pillars">
-            {A.points.filter(shows).map((p) => (
-              <li key={p.value.title}>
-                <Icon name={p.value.icon as IconName} size={20} />
-                <span>
-                  <strong>
-                    {p.value.title}
-                    <Flag claim={p} />
-                  </strong>
-                  {p.value.body}
+          <h2 id="ai-title">{A.h2}</h2>
+          <p className="ai__lead">{A.intro}</p>
+        </Reveal>
+
+        <div className="ai7__demo">
+          <Demo />
+        </div>
+
+        <div className="ai7__rows">
+          <table className="ai7__table">
+            <thead>
+              <tr>
+                <th scope="col">{c.problem}</th>
+                <th scope="col">{c.does}</th>
+                <th scope="col">{c.outcome}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {A.rows.map((r) => (
+                <tr key={r.problem}>
+                  <th scope="row" data-label={c.problem}>
+                    {r.problem}
+                  </th>
+                  <td data-label={c.does}>{r.does}</td>
+                  <td data-label={c.outcome}>
+                    <Icon name="check" size={14} strokeWidth={2.5} />
+                    {r.outcome}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <p className="ai7__decision">
+            {A.decisionLead}{" "}
+            <strong>
+              {A.decisions.map((d, i) => (
+                <span key={d}>
+                  {i > 0 && <span aria-hidden="true"> · </span>}
+                  {d}
                 </span>
-              </li>
-            ))}
-          </ul>
-          <a className="btn btn--light" href={A.button.href} target="_blank" rel="noopener" data-cta="ai-governance">
-            {A.button.label} <Icon name="arrowRight" size={18} />
-          </a>
-          <p className="ai__agents">
-            <a href={A.agentsLink.href} target="_blank" rel="noopener" data-interaction="ai-agents-blog">
-              {A.agentsLink.text}
-            </a>
+              ))}
+            </strong>
           </p>
-        </Reveal>
-        <Reveal className="ai__demo" delay={100}>
-          <PromptDemo />
-        </Reveal>
+          <div className="ai7__links">
+            <a className="btn btn--light" href={A.button.href} target="_blank" rel="noopener" data-cta="ai-security">
+              {A.button.label} <Icon name="arrowRight" size={18} />
+            </a>
+            <a className="ai7__text-link" href={A.gatewayLink.href} target="_blank" rel="noopener" data-interaction="ai-gateway-blog">
+              {A.gatewayLink.text} →
+            </a>
+          </div>
+        </div>
       </div>
     </section>
   );

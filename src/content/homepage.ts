@@ -1,77 +1,58 @@
 /**
- * Zaperon homepage copy (v4 messaging). Single source of truth for all
- * visible homepage text.
+ * Zaperon homepage copy (v7). Single source of truth for all visible homepage text.
  *
- * Claim status
- *   confirmed         render.
- *   needs-validation  render, marked `// VALIDATE:` and listed in VALIDATION.md.
- *                     In review mode (?review=1) these show a ⚑ marker.
- *   hold              do not render. Kept here, commented, with the reason.
- *
- * Copy rules: no em dashes, en dashes, "--" or "~" in visible text, alt text
- * or aria labels. Never name competitors. Mockups use fictional, globally
- * neutral sample data and stay labelled "Illustrative UI".
+ * Copy is final: do not paraphrase, shorten, add claims or add numbers.
+ * Rules: US English. No em dashes, en dashes, "--" or "~" in visible text, alt text,
+ * meta or JSON-LD. Never name competitors. No pricing or cost-saving claims.
+ * Every statistic shows its source and links to the original report.
+ * Mockups use fictional data and stay labelled "Illustrative UI".
  */
 
 import { LINKS } from "../context";
 
-export type ClaimStatus = "confirmed" | "needs-validation" | "hold";
-
-export type Claim<T = string> = {
-  status: ClaimStatus;
-  value: T;
-  /** What has to be confirmed. Required for needs-validation and hold. */
-  validate?: string;
-};
-
-const ok = <T,>(value: T): Claim<T> => ({ status: "confirmed", value });
-const check = <T,>(value: T, validate: string): Claim<T> => ({ status: "needs-validation", value, validate });
-
-/** True when a claim may be rendered. */
-export const shows = (c: Claim<unknown>) => c.status !== "hold";
-
 /* ------------------------------------------------------------------ */
-/* 1. Announcement bar                                                 */
+/* 0. Announcement bar                                                 */
 /* ------------------------------------------------------------------ */
 export const announcement = {
-  lead: "New:",
-  text: "see how Zaperon keeps sensitive data out of AI tools.",
-  linkText: "Read the AI governance datasheet",
-  href: LINKS.aiDatasheet,
+  lead: "News:",
+  text: "Zaperon raises $750K in seed funding.",
+  linkText: "Read more →",
+  href: LINKS.seedNews,
 };
 
 /* ------------------------------------------------------------------ */
-/* 2. Hero                                                             */
+/* 1. Hero                                                             */
 /* ------------------------------------------------------------------ */
 export const hero = {
-  eyebrow: "IDENTITY-CENTRIC ZERO-TRUST ACCESS & DATA PROTECTION",
+  eyebrow: "IDENTITY-CENTRIC ACCESS, DATA & AI PROTECTION",
   h1Lead: "Zero trust that controls",
   h1Accent: "who gets in, and what data gets out.",
   subhead:
-    "Zaperon verifies the person and their device, then uses that same trust to decide what they can open, and what they can share, upload or paste into AI tools.",
-  audience: "For security and IT leaders protecting people, devices, applications and sensitive data.",
-  primaryCta: "Book a demo",
+    "Zaperon verifies the person and their device, then applies that trust to every step of work: the apps they open, the sites they visit, the files they share, and the AI tools and agents that act on their behalf.",
+  audience: "For security and IT leaders protecting people, devices, applications, data and AI.",
+  primaryCta: { label: "Book a demo", href: LINKS.contact },
   videoCta: "Watch the 2-minute overview",
-  /**
-   * VALIDATE: product overview video URL. None supplied or verified yet.
-   * While null, the modal shows an empty, labelled video slot.
-   * Use an embeddable URL, e.g. https://www.youtube-nocookie.com/embed/<id>.
-   */
-  videoEmbedUrl: check<string | null>(null, "Overview video: supply the embeddable URL for the 2-minute product video."),
+  /** The overview video used on zaperon.com (YouTube ZKsMy-srPf0). */
+  videoEmbedUrl: "https://www.youtube-nocookie.com/embed/ZKsMy-srPf0" as string | null,
+  /** No-JavaScript fallback for the video button. */
+  videoWatchUrl: "https://www.youtube.com/watch?v=ZKsMy-srPf0",
 };
 
-export type DeviceId = "company" | "personal" | "unknown";
-export type Outcome = "allowed" | "blocked" | "view";
-export type CheckState = "pass" | "fail" | "warn";
+export type ChipState = "pass" | "fail" | "unknown" | "skip";
+export type Outcome = "allowed" | "blocked";
+export type Tone = "ok" | "deny";
 
 export type SimulatorScenario = {
-  id: DeviceId;
+  id: "company" | "failing" | "unknown";
   tab: string;
-  device: { name: string; status: string; tone: "ok" | "warn" | "deny" };
-  checks: { label: string; state: CheckState }[];
+  icon: "laptop" | "alert";
+  chips: { label: string; state: ChipState; text?: string }[];
+  decision: { label: string; tone: Tone };
+  reason: string;
+  actions: Record<"open" | "usb" | "paste", Outcome>;
+  /** "See details": checks list and policy box. */
+  checks: { label: string; state: ChipState }[];
   policy: string[];
-  decision: { label: string; tone: "ok" | "warn" | "deny" };
-  actions: Record<"open" | "download" | "paste", Outcome>;
 };
 
 export const simulator = {
@@ -80,71 +61,94 @@ export const simulator = {
   person: { initials: "AM", name: "Alex Morgan", role: "Engineer" },
   actionLabels: {
     open: "Open repository",
-    download: "Download source file",
+    usb: "Copy source file to USB",
     paste: "Paste code into personal AI account",
   },
-  outcomeLabels: { allowed: "Allowed", blocked: "Blocked", view: "View only" } satisfies Record<Outcome, string>,
-  autoplayMs: 4000,
+  outcomeLabels: { allowed: "Allowed", blocked: "Blocked" } satisfies Record<Outcome, string>,
+  detailsLabels: { show: "See details", hide: "Hide details", checks: "Checks", policy: "Policy evaluated" },
+  /** Index of the default tab: desktop and mobile. */
+  defaultTab: { desktop: 0, mobile: 1 },
   scenarios: [
-    ok<SimulatorScenario>({
+    {
       id: "company",
       tab: "Company laptop",
-      device: { name: "Company laptop", status: "Registered", tone: "ok" },
+      icon: "laptop",
+      chips: [
+        { label: "Person", state: "pass" },
+        { label: "Device", state: "pass" },
+        { label: "Posture", state: "pass" },
+      ],
+      decision: { label: "Allowed", tone: "ok" },
+      reason: "Registered company laptop. All checks passed.",
+      actions: { open: "allowed", usb: "blocked", paste: "blocked" },
       checks: [
         { label: "Passwordless sign-in approved", state: "pass" },
-        { label: "Registered device", state: "pass" },
-        { label: "OS up to date", state: "pass" },
-        { label: "Disk encrypted", state: "pass" },
+        { label: "Authorized device", state: "pass" },
+        { label: "OS", state: "pass" },
+        { label: "Antivirus", state: "pass" },
+        { label: "Disk encryption", state: "pass" },
+        { label: "Device lock", state: "pass" },
       ],
-      policy: ["user = Alex", "device = company, registered", "resource = code repository", "data = source code"],
-      decision: { label: "Allowed", tone: "ok" },
-      actions: { open: "allowed", download: "allowed", paste: "blocked" },
-    }),
-    // VALIDATE: data rules that use device conditions (view only on a personal device).
-    check<SimulatorScenario>(
-      {
-        id: "personal",
-        tab: "Personal laptop",
-        device: { name: "Personal laptop", status: "Registered", tone: "warn" },
-        checks: [
-          { label: "Passwordless sign-in approved", state: "pass" },
-          { label: "Registered personal device", state: "pass" },
-          { label: "OS up to date", state: "pass" },
-        ],
-        policy: ["user = Alex", "device = personal, registered", "resource = code repository", "data = source code"],
-        decision: { label: "Allowed · view only", tone: "warn" },
-        actions: { open: "allowed", download: "blocked", paste: "blocked" },
-      },
-      "Hero simulator, personal laptop: data rules can use device conditions (download blocked, view only on a registered personal device).",
-    ),
-    ok<SimulatorScenario>({
+      policy: ["user = Alex Morgan", "device = company laptop, authorized", "resource = code repository", "data = source code"],
+    },
+    {
+      id: "failing",
+      tab: "Failing checks",
+      icon: "laptop",
+      chips: [
+        { label: "Person", state: "pass" },
+        { label: "Device", state: "pass" },
+        { label: "Posture", state: "fail" },
+      ],
+      decision: { label: "Blocked until fixed", tone: "deny" },
+      reason: "Disk encryption is off. Access resumes once it's back on.",
+      actions: { open: "blocked", usb: "blocked", paste: "blocked" },
+      checks: [
+        { label: "Passwordless sign-in approved", state: "pass" },
+        { label: "Authorized device", state: "pass" },
+        { label: "OS", state: "pass" },
+        { label: "Antivirus", state: "pass" },
+        { label: "Disk encryption", state: "fail" },
+        { label: "Device lock", state: "pass" },
+      ],
+      policy: ["user = Alex Morgan", "device = company laptop, authorized", "posture = disk encryption off", "resource = code repository"],
+    },
+    {
       id: "unknown",
       tab: "Unknown device",
-      device: { name: "Unknown device", status: "Not registered", tone: "deny" },
-      checks: [
-        { label: "Password entered", state: "warn" },
-        { label: "Device not registered", state: "fail" },
+      icon: "alert",
+      chips: [
+        { label: "Person", state: "unknown" },
+        { label: "Device", state: "fail" },
+        { label: "Posture", state: "skip", text: "Posture not checked" },
       ],
-      policy: ["user = Alex", "device = not registered", "resource = code repository", "data = source code"],
       decision: { label: "Blocked", tone: "deny" },
-      actions: { open: "blocked", download: "blocked", paste: "blocked" },
-    }),
-  ],
+      reason: "Device not registered. A password alone isn't enough.",
+      actions: { open: "blocked", usb: "blocked", paste: "blocked" },
+      checks: [
+        { label: "Passwordless sign-in approved", state: "unknown" },
+        { label: "Authorized device", state: "fail" },
+        { label: "OS", state: "skip" },
+        { label: "Antivirus", state: "skip" },
+        { label: "Disk encryption", state: "skip" },
+        { label: "Device lock", state: "skip" },
+      ],
+      policy: ["user = unverified", "device = not registered", "resource = code repository", "data = source code"],
+    },
+  ] as SimulatorScenario[],
 };
 
 /* ------------------------------------------------------------------ */
-/* 3. Proof bar                                                        */
+/* 2. Proof bar                                                        */
 /* ------------------------------------------------------------------ */
 const CDN = "https://cdn.prod.website-files.com/6ad59f6192ec57f75a664d87/";
 
+export const trustLine = "Trusted in regulated industries · Phased rollout without disrupting users";
+
 export const proofBar = {
   label: "Trusted by Global Enterprises",
-  // VALIDATE: support model (guided deployment, dedicated team).
-  trustLine: check(
-    "Trusted in regulated industries · Guided deployment with a dedicated team",
-    "Proof bar and final CTA trust line: confirm the support model (guided deployment with a dedicated team).",
-  ),
-  /** Customer logos as published on zaperon.com (verified Nov 2026). */
+  trustLine,
+  /** Customer logos as published on zaperon.com. */
   logos: [
     { name: "KPFS", src: `${CDN}6ae1e6439b8bd9d13979f965_ic-logo-8.webp` },
     { name: "MS Fincap", src: `${CDN}6ae1e641599f4fae9a313dc6_ic-logo-3.webp` },
@@ -160,528 +164,414 @@ export const proofBar = {
 };
 
 /* ------------------------------------------------------------------ */
-/* 4. The problem                                                      */
+/* 3. Why now                                                          */
 /* ------------------------------------------------------------------ */
-export const problem = {
-  eyebrow: "The problem",
-  h2: "A valid login doesn't guarantee safe access. And it says nothing about what happens next.",
+const DBIR = {
+  name: "Verizon 2026 Data Breach Investigations Report",
+  href: "https://www.verizon.com/business/resources/T26/reports/2026-dbir-data-breach-investigations-report.pdf",
+};
+const IBM = { name: "IBM Cost of a Data Breach Report 2026", href: "https://www.ibm.com/reports/data-breach" };
+
+export const whyNow = {
+  eyebrow: "WHY NOW",
+  h2: "The risks you know are still here. AI just added new ones.",
   intro:
-    "Passwords get phished. Contractors sign in from laptops IT has never seen. And once someone is in, a file upload, an email or an AI prompt can carry company data out in seconds. Most security stacks split these checks across separate tools. Risk lives in the gaps between them.",
-  cards: [
-    { icon: "key", title: "Right password, wrong person.", body: "Stolen credentials still open doors.", tags: "Phished passwords · reused credentials" },
-    { icon: "laptop", title: "Right person, untrusted device.", body: "Personal and contractor laptops sit outside IT's view.", tags: "Contractors · BYOD · field staff" },
-    { icon: "file", title: "Right person, wrong destination.", body: "Files, uploads and prompts leave quietly.", tags: "Personal email · cloud drives · AI tools" },
-  ] as const,
-};
-
-/* ------------------------------------------------------------------ */
-/* 5. How it works                                                     */
-/* ------------------------------------------------------------------ */
-export const howItWorks = {
-  eyebrow: "How it works",
-  h2: "Three questions. One connected decision.",
-  steps: [
+    "Work now happens everywhere: on home networks, personal devices, SaaS apps and AI tools. Years of adding a new tool for every new problem left disconnected silos, and the gaps between them are where attackers and unmanaged AI agents get through.",
+  columns: [
     {
-      title: "Who is it?",
-      body: "Passwordless, phishing-resistant sign-in, tied to the person's registered device.",
-      chips: ["No password to steal", "Device-bound sign-in", "Phishing-resistant"],
+      id: "still",
+      title: "Still here",
+      items: [
+        "Phished and stolen passwords",
+        "Personal and unmanaged devices",
+        "VPN-based access that can expose more of the network than users need",
+        "Contractors and vendors with more access than they need",
+        "Files leaving by email, USB and web uploads",
+      ],
     },
     {
-      title: "Which device?",
-      body: "Is it registered, and does it meet your standards for encryption, updates and antivirus? Checked before access is granted.",
-      chips: ["Registered", "Encrypted", "Up to date"],
-    },
-    {
-      title: "What data?",
-      body: "The answers to the first two shape what that person can open, download, share, upload or paste into AI.",
-      chips: ["Open", "Download", "Share", "Upload", "AI prompt"],
+      id: "arriving",
+      title: "Arriving now",
+      items: [
+        "Work data pasted into personal AI accounts",
+        "AI tools and browser extensions nobody approved",
+        "Unmanaged AI agents working around your controls",
+        "Secrets and source code inside prompts",
+        "Prompt injection that turns AI against its own users",
+      ],
     },
   ],
-  result: "Allow, warn or block, based on the person, the device and the data.",
-  diagram: {
-    user: { label: "User", sub: "Phishing-resistant sign-in" },
-    device: { label: "Device", sub: "Registered · encrypted · up to date" },
-    decision: { label: "Zaperon decision", inputs: ["Person", "Device", "Data"] },
-    outputs: [
-      { icon: "app", label: "Applications", sub: "SaaS & on-premise sign-in" },
-      { icon: "server", label: "Private apps", sub: "Per-app zero trust access" },
-      { icon: "globe", label: "Web & SaaS", sub: "Browsing & Shadow IT" },
-      { icon: "database", label: "Data", sub: "Endpoint, web & email" },
-      { icon: "chat", label: "AI", sub: "Tools and prompts" },
-    ],
-  },
+  stats: [
+    {
+      value: "45%",
+      text: "of employees now regularly use AI on their work devices, up from 15% a year earlier.",
+      source: DBIR,
+    },
+    { value: "67%", text: "of users who access AI tools on company devices do so with non-corporate accounts.", source: DBIR },
+    { value: "92%", text: "of organizations hit by an AI-related breach lacked proper AI access controls.", source: IBM },
+  ],
+  sourceLabel: "Source:",
+  closing: "AI risk is an access and data problem. That's what Zaperon controls.",
 };
 
 /* ------------------------------------------------------------------ */
-/* 6. The difference                                                   */
+/* 4. AI & agent security                                              */
 /* ------------------------------------------------------------------ */
-export type Pill = "allowed" | "blocked" | "view";
-
-export const difference = {
-  eyebrow: "WHY IT'S DIFFERENT",
-  h2: "The same trust, from login to every file",
+export const aiSecurity = {
+  eyebrow: "AI & AGENT SECURITY",
+  h2: "Know who's using AI. Control what data it gets.",
   intro:
-    "In most organisations, sign-in, device checks and data protection run in separate systems, each with its own rules. Zaperon verifies the person and the device itself, so the same user and device information can shape what that person can do with your data.",
-  points: [
-    // VALIDATE: device binding required for all users.
-    check(
-      {
-        title: "A stolen password isn't enough on its own.",
-        body: "Signing in to protected apps requires the person's registered device, which holds a Zaperon-issued certificate.",
-      },
-      "Difference, point 1: device binding (registered device with a Zaperon-issued certificate) is required for all users.",
-    ),
-    // VALIDATE: access and data rules share conditions.
-    check(
-      {
-        title: "Access and data rules can use the same conditions.",
-        body: "The user, group and device status that decide app access can also decide data actions, such as view-only on a personal laptop.",
-      },
-      "Difference, point 2: data rules can use the same user, group and device conditions as access rules.",
-    ),
-    ok({ title: "Every decision leaves evidence.", body: "Who, which device, what data and where, in one record." }),
-  ],
-  // VALIDATE: whole "change one condition" panel.
-  panel: check(
+    "When an agent acts for a person, it doesn't always act with that person's permissions. The question is no longer only who has access. It's which person or agent is acting, under whose authority, and what it's allowed to touch. Zaperon makes the security decision before data is exposed or an action runs.",
+  columns: { problem: "The problem", does: "What Zaperon does", outcome: "The outcome" },
+  rows: [
     {
-      label: "Illustrative UI",
-      toggle: { company: "Device: Company laptop", personal: "Device: Personal laptop" },
-      access: {
-        title: "Access rules",
-        rows: [
-          { label: "CRM", company: "allowed", personal: "allowed" },
-          { label: "Code repository", company: "allowed", personal: "allowed" },
-          { label: "Finance app", company: "allowed", personal: "blocked" },
-        ] as { label: string; company: Pill; personal: Pill }[],
-      },
-      data: {
-        title: "Data rules",
-        rows: [
-          { label: "Download files", company: "allowed", personal: "view" },
-          { label: "Share externally", company: "allowed", personal: "blocked" },
-          { label: "Upload to personal drive", company: "blocked", personal: "blocked" },
-        ] as { label: string; company: Pill; personal: Pill }[],
-      },
-      caption: "One condition changed. Access and data rules both responded.",
+      problem: "You can't govern AI you can't see",
+      does: "Discovers AI apps, copilots, browser extensions, agents, MCP servers and keys, and who uses them",
+      outcome: "A live inventory of AI across the company",
     },
-    "Difference panel: one device condition changes both access rules (Finance app) and data rules (download, share) as shown.",
-  ),
-  pillLabels: { allowed: "Allowed", blocked: "Blocked", view: "View only" } satisfies Record<Pill, string>,
-};
-
-export type DemoSignal = { label: string; tone: "ok" | "deny" | "warn" | "neutral" };
-
-export const demoStrip = {
-  label: "Illustrative",
-  cards: [
-    ok({
-      scenario: "Alex opens the code repository from a registered laptop",
-      signals: [
-        { label: "Person", tone: "ok" },
-        { label: "Device", tone: "ok" },
-        { label: "Allowed", tone: "ok" },
-      ] as DemoSignal[],
-    }),
-    ok({
-      scenario: "Someone uses Alex's password on an unknown laptop",
-      signals: [
-        { label: "Device", tone: "deny" },
-        { label: "Blocked", tone: "deny" },
-      ] as DemoSignal[],
-    }),
-    ok({
-      scenario: "Alex, on a trusted laptop, uploads a source file to a personal cloud drive",
-      signals: [
-        { label: "Person", tone: "ok" },
-        { label: "Device", tone: "ok" },
-        { label: "Data", tone: "deny" },
-        { label: "Blocked", tone: "deny" },
-      ] as DemoSignal[],
-    }),
-    // VALIDATE: view only on a personal device.
-    check(
-      {
-        scenario: "Alex, on a personal laptop, opens a design file",
-        signals: [
-          { label: "Person", tone: "ok" },
-          { label: "Device: personal", tone: "neutral" },
-          { label: "View only", tone: "warn" },
-        ] as DemoSignal[],
-      },
-      "Demo strip card 4: view only for a design file on a personal laptop.",
-    ),
+    {
+      problem: "Work goes into personal AI accounts",
+      does: "Allows corporate AI workspaces and blocks personal accounts, with rules based on the person, their role and their device",
+      outcome: "AI use stays in accounts you control",
+    },
+    {
+      problem: "Customer data, secrets and source code end up in prompts",
+      does: "Inspects prompts, uploads and clipboard activity, detects secrets and prompt injection, then redacts or blocks sensitive data",
+      outcome: "Sensitive data is stopped before it reaches a model",
+    },
+    {
+      problem: "Agents act with whatever access they inherit",
+      does: "Discovers agents and lets only admin-approved ones run. The Agentic AI Gateway gives each agent its own identity, narrows its permissions at every hop, and asks a person before high-risk actions",
+      outcome: "Each agent touches only what its task needs",
+    },
   ],
-};
-
-/* ------------------------------------------------------------------ */
-/* 7 + 8. Pillars                                                      */
-/* ------------------------------------------------------------------ */
-export type PillarTab = { id: string; icon: string; title: string; body: string };
-
-export const pillarAccess = {
-  id: "who-gets-in",
-  eyebrow: "WHO GETS IN",
-  h2: "The right person, on a trusted device",
-  tabs: [
-    ok<PillarTab>({
-      id: "passwordless",
-      icon: "fingerprint",
-      title: "Passwordless and phishing-resistant",
-      body: "Sign-in uses a certificate on the person's registered device instead of a password, so a phished password alone can't open protected apps.",
-    }),
-    ok<PillarTab>({
-      id: "devices",
-      icon: "laptop",
-      title: "Personal and contractor devices, on your terms",
-      body: "Devices are registered and checked against your standards before access. Devices that aren't registered don't get in.",
-    }),
-    ok<PillarTab>({
-      id: "apps",
-      icon: "route",
-      title: "Specific apps, not the whole network",
-      body: "Reach SaaS, cloud and on-premise apps, servers and network devices without a traditional VPN.",
-    }),
-    ok<PillarTab>({
-      id: "directory",
-      icon: "users",
-      title: "Works with your directory",
-      body: "Users and groups sync from Active Directory, LDAP or Google Workspace.",
-    }),
-  ],
-};
-
-export const pillarData = {
-  id: "what-data-gets-out",
-  eyebrow: "WHAT DATA GETS OUT",
-  h2: "Data loss prevention that knows who, which device and what",
-  tabs: [
-    // VALIDATE: per-user, per-device file permissions.
-    check<PillarTab>(
-      {
-        id: "permissions",
-        icon: "file",
-        title: "Same file, different permissions",
-        body: "A finance lead on a company laptop can share a report. A contractor on a personal laptop can view it, but not download it.",
-      },
-      "Pillar 2, same file different permissions: share for a finance lead on a company laptop, view only for a contractor on a personal laptop.",
-    ),
-    ok<PillarTab>({
-      id: "exits",
-      icon: "layers",
-      title: "The common exits, controlled",
-      body: "Web uploads, email attachments, USB drives, printing, copy-paste and screenshots. Allow, warn or block each one.",
-    }),
-    // VALIDATE: detection method and file types.
-    check<PillarTab>(
-      {
-        id: "detection",
-        icon: "eye",
-        title: "Recognises sensitive content",
-        body: "Detects the data types you choose, such as personal data, financial records and source code, in files and in text sent to AI tools.",
-      },
-      "Pillar 2, sensitive content: detection method and supported file types.",
-    ),
-    // VALIDATE: AI tool list, Copilot, browser vs desktop apps.
-    check<PillarTab>(
-      {
-        id: "ai",
-        icon: "chat",
-        title: "Safe use of AI",
-        body: "See which AI tools people use. On supported tools such as ChatGPT and Gemini, allow company accounts only and inspect prompts and file uploads before they're sent.",
-      },
-      "Pillar 2, safe use of AI: supported AI tool list, Copilot, and browser vs desktop app coverage.",
-    ),
-    ok<PillarTab>({
-      id: "record",
-      icon: "clipboard",
-      title: "A record of each decision",
-      body: "Who, which device, what data and where, ready for investigations and audits.",
-    }),
-  ],
-  alsoIncluded: "Also included: Web filtering and threat protection, and discovery of the cloud apps your teams use.",
-};
-
-/* ------------------------------------------------------------------ */
-/* 9. AI spotlight                                                     */
-/* ------------------------------------------------------------------ */
-export const aiSpotlight = {
-  eyebrow: "SAFE USE OF AI",
-  h2Lead: "Adopt AI",
-  h2Accent: "without losing control",
-  h2Tail: "of your data.",
-  body: "Employees are adopting AI tools faster than security teams can review them. Zaperon shows which AI tools are in use, keeps work in company accounts on supported tools, and inspects prompts and uploads before sensitive data leaves.",
-  points: [
-    ok({ icon: "eye", title: "Discover AI use", body: "See which AI tools are in use, and by whom." }),
-    ok({ icon: "file", title: "Inspect prompts and uploads", body: "Check for sensitive data before it reaches an external model." }),
-    // VALIDATE: company-account enforcement on supported tools.
-    check(
-      { icon: "lock", title: "Keep work in company accounts", body: "On supported tools, allow company accounts and block personal ones." },
-      "AI spotlight: on supported tools, allow company accounts and block personal ones.",
-    ),
-  ],
-  button: { label: "See AI governance", href: LINKS.aiDatasheet },
-  agentsLink: {
-    text: "AI agents need identity and limits too. Read how Zaperon approaches securing AI agents.",
+  decisionLead: "Every request ends in a clear decision:",
+  decisions: ["Allow", "Redact", "Block", "Ask a human", "Audit"],
+  button: { label: "See AI security", href: "https://www.zaperon.com/platform#pillar-aispm" },
+  gatewayLink: {
+    text: "See how the Agentic AI Gateway works",
     href: "https://www.zaperon.com/blog/securing-the-agentic-enterprise-why-ai-needs-identity-authorization-and-runtime-controls",
   },
   demo: {
     label: "Illustrative UI",
-    app: "AI chatbot",
-    gateway: "Zaperon AI gateway",
-    waiting: "Waiting for prompt",
-    inspecting: "Inspecting prompt",
-    prompt: "Summarise churn risk for these accounts: Jordan Lee, jordan.lee@acme-example.com, account 4471-2290",
-    detections: ["Customer name", "Email address", "Account number"],
-    toggle: { company: "Company account", personal: "Personal account" },
-    personalVerdict: "Prompt blocked before it reached the external model",
-    /**
-     * Company account verdict. "Allowed · sensitive fields redacted" only once
-     * redaction is confirmed; until then "Allowed · logged".
-     */
-    companyVerdict: check(
-      "Allowed · logged",
-      "AI spotlight demo, company account: confirm whether sensitive fields are redacted. If yes, change the verdict to \"Allowed · sensitive fields redacted\".",
-    ),
-    policy: "Policy: customer data to personal AI accounts · all users",
+    tabs: { prompt: "Employee prompt", agent: "Agent action" },
+    prompt: {
+      toggle: { company: "Company workspace", personal: "Personal account" },
+      app: "AI assistant",
+      gateway: "Zaperon AI gateway",
+      text: "Summarize churn risk for these accounts: Jordan Lee, jordan.lee@acme-example.com, account 4471-2290…",
+      chips: ["Customer name", "Email address", "Account number"],
+      result: "Prompt blocked before it reached the external model.",
+    },
+    agent: {
+      app: "Agentic AI Gateway",
+      request: "Support agent requests: export full customer table to an external tool.",
+      steps: [
+        "Agent identity verified",
+        "Permission narrowed to this ticket's customer",
+        "Export flagged as high risk",
+        "Ask a human",
+      ],
+      result: "Waiting for approval.",
+    },
   },
 };
 
 /* ------------------------------------------------------------------ */
-/* 10. Comparison                                                      */
+/* 5. One platform (workday strip)                                     */
 /* ------------------------------------------------------------------ */
-export const comparison = {
-  eyebrow: "WHY ZAPERON",
-  h2: "Connected decisions, not connected tools",
-  columns: { fragmented: "The fragmented way", zaperon: "With Zaperon" },
-  rows: [
-    ok({ fragmented: "Sign-in, device checks and data rules set up in separate systems", zaperon: "Identity and device verification built in" }),
-    // VALIDATE: data rules share access-rule conditions.
-    check(
-      {
-        fragmented: "Access rules and data rules managed apart, each with its own context",
-        zaperon: "Data rules can use the same user, group and device conditions as access rules",
+export const workday = {
+  id: "one-platform",
+  h2: "One platform, from the first sign-in to the last AI action.",
+  intro:
+    "Most stacks check each step of work with a different tool, and the risk sits in the gaps. Zaperon applies identity and device context across access, data and AI security decisions.",
+  toggle: { without: "Without Zaperon", with: "With Zaperon" },
+  steps: [
+    { step: "Sign in", without: "Password only", with: "Passwordless, from an authorized device" },
+    { step: "Device", without: "Unknown laptop", with: "Checked continuously; access ends when risk changes" },
+    { step: "Open apps", without: "Whole network through a VPN", with: "Only the apps their role needs" },
+    { step: "Browse the web", without: "A separate web filter", with: "Web filtering and cloud app discovery" },
+    { step: "Move files", without: "A separate DLP tool", with: "Email, uploads, USB and screen capture controlled" },
+    { step: "Use AI and agents", without: "Unseen", with: "Prompts inspected, agents governed" },
+  ],
+  lineLead: "At every step Zaperon asks:",
+  questions: ["Who is it?", "Which device?", "What data?"],
+  lineTail: "Then it allows, warns or blocks.",
+};
+
+/* ------------------------------------------------------------------ */
+/* 6. Four modules                                                     */
+/* ------------------------------------------------------------------ */
+export const modules = {
+  id: "platform",
+  eyebrow: "PLATFORM",
+  h2: "Four modules. One platform.",
+  includesLabel: "Includes",
+  learnMore: "Learn more",
+  items: [
+    {
+      id: "zero-trust-access",
+      icon: "fingerprint",
+      group: "Who gets in",
+      name: "Zero Trust Access",
+      promise:
+        "No passwords to steal, no codes to type, no VPN. People reach only the apps and servers their role needs, from devices that pass your checks. Access ends as soon as risk changes.",
+      includes: [
+        "SSO",
+        "MFA",
+        "Passwordless sign-in",
+        "ZTNA",
+        "Device-bound certificates",
+        "Continuous posture checks (OS, antivirus, disk encryption, device password)",
+        "Contractor and BYOD access",
+        "Server access (RDP, SSH)",
+      ],
+      href: "https://www.zaperon.com/platform#pillar-zero-trust-access",
+    },
+    {
+      id: "data-security",
+      icon: "file",
+      group: "What data gets out",
+      name: "Data Security",
+      promise:
+        "Keep drawings, designs, code and customer data inside. Control what leaves through email, web uploads, USB, Bluetooth, AirDrop and screen capture.",
+      includes: ["Endpoint DLP", "Email DLP", "Upload and download monitoring", "Removable media and screen capture controls"],
+      href: "https://www.zaperon.com/platform#pillar-data-security",
+    },
+    {
+      id: "web-security",
+      icon: "globe",
+      group: "Where users go",
+      name: "Web Security",
+      promise:
+        "Control the web and Shadow IT. See the cloud apps your teams use and block malicious or unsanctioned ones in real time.",
+      includes: ["Secure web gateway", "CASB", "Cloud app discovery", "Web traffic monitoring"],
+      href: "https://www.zaperon.com/platform#pillar-web-security",
+    },
+    {
+      id: "ai-governance",
+      icon: "chat",
+      group: "How AI is accessed and governed",
+      name: "AI Governance",
+      promise:
+        "Use AI and agents without leaking data. Discover AI use, control who can use which AI tools, and inspect what goes into them.",
+      includes: [
+        "Shadow AI discovery",
+        "AI gateway",
+        "AI access control",
+        "Prompt, upload and clipboard inspection",
+        "Prompt injection and secrets detection",
+        "Agent governance",
+      ],
+      href: "https://www.zaperon.com/platform#pillar-aispm",
+    },
+  ],
+  footnote: "All four run natively on one platform, with one console and consistent policies across users, devices and channels.",
+};
+
+/* ------------------------------------------------------------------ */
+/* 7. What changes for your team                                       */
+/* ------------------------------------------------------------------ */
+export type OutcomeCard = {
+  id: string;
+  icon: string;
+  title: string;
+  line: string;
+  link?: { label: string; href: string };
+  quote?: { text: string; attribution: string };
+  /** Future metric slot: rendered only once a number is approved. */
+  metric?: { value: string; label: string } | null;
+};
+
+export const outcomes = {
+  id: "outcomes",
+  h2: "What changes for your team",
+  cards: [
+    {
+      id: "vpn",
+      icon: "route",
+      title: "Replace legacy VPN access.",
+      line: "People reach only the apps their role needs, from any location, without exposing your network to VPN vulnerabilities.",
+      link: { label: "Replace Legacy VPN →", href: "https://www.zaperon.com/solutions/replace-legacy-vpn" },
+      metric: null,
+    },
+    {
+      id: "passwordless",
+      icon: "fingerprint",
+      title: "Passwordless sign-in.",
+      line: "Removes the password attackers phish, and only authorized devices get in.",
+      quote: {
+        text: "Even with a basic Microsoft 365 license, we eliminated passwords and applied conditional access using Zaperon Zero Trust platform.",
+        attribution: "CISO, Tier-1 auto components manufacturer",
       },
-      "Comparison row 2: data rules can use the same user, group and device conditions as access rules.",
-    ),
-    ok({ fragmented: "Different tools watch different data channels", zaperon: "One view of activity across the channels Zaperon protects" }),
-    ok({ fragmented: "Audit evidence spread across consoles", zaperon: "One record of who did what, from which device" }),
-  ],
-  disclaimer: "Comparison describes common approaches, not specific vendors.",
-  cta: { lead: "See it on your own apps", button: "Book a demo" },
-};
-
-/* ------------------------------------------------------------------ */
-/* 11. Where teams start                                               */
-/* ------------------------------------------------------------------ */
-const UC = "https://www.zaperon.com/use-cases/";
-export const useCases = {
-  eyebrow: "WHERE TEAMS START",
-  h2: "Start where the risk is highest",
-  capsLabel: "Capabilities used",
-  cases: [
-    { id: "vpn", icon: "route", title: "Replace VPN access.", line: "Give people specific apps instead of the whole network.", href: `${UC}replace-legacy-vpn`, caps: ["Zero trust access", "Passwordless login", "Device checks"] },
-    { id: "byod", icon: "laptop", title: "Secure contractors and personal laptops.", line: "Access on your terms, from devices you've verified.", href: `${UC}secure-byod-access`, caps: ["Device checks", "Zero trust access", "Data loss prevention"] },
-    { id: "data", icon: "code", title: "Protect source code and designs.", line: "Control where your most valuable files can go.", href: `${UC}prevent-data-leakage`, caps: ["Data loss prevention", "Device checks"] },
-    { id: "ai", icon: "chat", title: "Adopt AI without leaking data.", line: "Let teams use AI while sensitive data stays inside.", href: `${UC}monitor-ai-interactions`, caps: ["AI governance", "Data loss prevention"] },
-    { id: "ato", icon: "key", title: "Stop account takeover.", line: "Make stolen passwords useless on their own.", href: `${UC}prevent-account-takeover`, caps: ["Passwordless login", "Device checks"] },
-    { id: "audit", icon: "clipboard", title: "Show auditors who accessed what.", line: "One record across access and data.", href: `${UC}ensure-regulatory-compliance`, caps: ["Zero trust access", "Data loss prevention"] },
-  ],
-};
-
-/* ------------------------------------------------------------------ */
-/* 12. Proof                                                           */
-/* ------------------------------------------------------------------ */
-export const customerProof = {
-  eyebrow: "CUSTOMER PROOF",
-  h2: "Proof from teams running Zaperon",
-  caseStudy: {
-    label: "Auto components manufacturer",
-    number: "1,000",
-    unit: "users protected",
-    body: "Product designs and source code protected across laptops, email, web and collaboration tools.",
-    link: "Read the case study",
-    href: LINKS.mfgCaseStudy,
-    // HOLD: two outcome metric slots. Outcome metrics pending from the customer.
-    metrics: [] as { value: string; label: string }[],
-  },
-  quotes: [
-    ok({
-      quote:
-        "Even with a basic Microsoft 365 license, we eliminated passwords and applied conditional access using Zaperon Zero Trust platform. Our email access on mobile phones is also now fully secured.",
-      attribution: "CISO, Tier-1 auto components manufacturer",
-    }),
-    // VALIDATE: approval for the shortened KPFS quote.
-    check(
-      {
-        quote:
-          "The single console of Zaperon's SSE platform has given us complete visibility and control over access to our IT infrastructure across every user and device.",
+      metric: null,
+    },
+    {
+      id: "designs",
+      icon: "code",
+      title: "Keep sensitive designs and source code protected.",
+      line: "Drawings, designs and code stay protected across email, web uploads, endpoints, Teams and Meet.",
+      quote: {
+        text: "Zaperon helped us move from isolated DLP controls to a more unified data protection model aligned to how our teams actually work.",
+        attribution: "CISO, leading auto-ancillary manufacturer, 1,000 users",
+      },
+      link: { label: "Read the case study →", href: LINKS.mfgCaseStudy },
+      metric: null,
+    },
+    {
+      id: "audits",
+      icon: "clipboard",
+      title: "Audits answered from one record.",
+      line: "Blocked actions are recorded with supporting security evidence: who, which device, what and where. One dashboard turns it into security metrics you can report upward, and supports DPDP-related security and audit workflows.",
+      quote: {
+        text: "The single console of Zaperon's SSE platform has given us complete visibility and control over access to our IT infrastructure across every user and device.",
         attribution: "Head of IT, KPFS",
       },
-      "Proof, KPFS quote: customer approval for the shortened quote (cost sentence removed).",
-    ),
+      metric: null,
+    },
+  ] as OutcomeCard[],
+  cta: { lead: "See it on your own apps", label: "Book a demo", href: LINKS.contact },
+};
+
+/* ------------------------------------------------------------------ */
+/* 8. Integration and deployment                                       */
+/* ------------------------------------------------------------------ */
+export type HubNode = { label: string; logo: string };
+
+export const deploy = {
+  id: "deployment",
+  h2: "Fits the identity and application stack you already run",
+  intro:
+    "Zaperon integrates with your existing directory and business applications, with no rip-and-replace. A structured four-phase approach takes you from mapping data flows to enterprise-wide enforcement.",
+  phases: [
+    { title: "Discover.", body: "Map how sensitive data moves across endpoints, email, web and collaboration tools." },
+    { title: "Pilot.", body: "Validate access and data policies with a defined group before enforcement." },
+    { title: "Roll out.", body: "Extend coverage across users, devices and locations with minimal disruption to work." },
+    { title: "Optimize.", body: "Refine controls using audit trails and policy events from one console." },
   ],
+  proof:
+    "Deployed across 1,000 users and multiple locations for a leading auto-ancillary manufacturer, with Microsoft 365, GitHub and SAP integrated.",
+  hub: {
+    label: "Integration overview",
+    directoryTitle: "Your directory",
+    directory: [
+      { label: "Active Directory", logo: "ad" },
+      { label: "LDAP", logo: "ldap" },
+      { label: "Google Workspace", logo: "google" },
+    ] satisfies HubNode[],
+    center: { name: "Zaperon", sub: "identity · device · data" },
+    appsTitle: "Your apps",
+    apps: [
+      { label: "Microsoft 365", logo: "microsoft" },
+      { label: "Google Workspace", logo: "google" },
+      { label: "GitHub", logo: "github" },
+      { label: "SAP", logo: "sap" },
+      { label: "Cloud and on-premises apps", logo: "app" },
+      { label: "Servers (RDP, SSH)", logo: "server" },
+      { label: "Network devices (RADIUS)", logo: "route" },
+      { label: "AI tools and models", logo: "chat" },
+    ] satisfies HubNode[],
+  },
 };
 
 /* ------------------------------------------------------------------ */
-/* 13. Integrations                                                    */
-/* ------------------------------------------------------------------ */
-export const integrations = {
-  eyebrow: "Integrations",
-  h2: "Works with the tools you already run.",
-  subhead: "Keep your directory and productivity suite. Zaperon adds passwordless login, device checks and data protection on top.",
-  tiles: [
-    { name: "Microsoft 365", kind: "Productivity & email", mono: "M365" },
-    { name: "Google Workspace", kind: "Productivity & email", mono: "GW" },
-    { name: "Active Directory", kind: "Directory sync", mono: "AD" },
-    { name: "LDAP", kind: "Directory sync", mono: "LDAP" },
-    { name: "SaaS applications", kind: "SSO & access", icon: "app" },
-    { name: "On-premise applications", kind: "Private access", icon: "server" },
-  ] as { name: string; kind: string; mono?: string; icon?: string }[],
-};
-
-/* ------------------------------------------------------------------ */
-/* 14. Deployment                                                      */
-/* ------------------------------------------------------------------ */
-export const deployment = {
-  h2: "Deploy in phases, with our team beside you",
-  steps: [
-    ok({ title: "Connect your directory.", body: "Sync users and groups from Active Directory, LDAP or Google Workspace." }),
-    ok({ title: "Enrol devices.", body: "Company devices can be enrolled in advance. Personal devices register through the Zaperon app." }),
-    ok({ title: "Start with your top priority.", body: "Replace VPN access, secure contractors, or protect a sensitive repository first." }),
-    // VALIDATE: staged data rules (monitor, warn, block).
-    check(
-      { title: "Bring in data rules gradually.", body: "Monitor first, then warn, then block, so work isn't disrupted." },
-      "Deployment step 4: data rules support monitor, then warn, then block.",
-    ),
-  ],
-  // VALIDATE: dedicated deployment team.
-  guided: check("Every deployment is guided by a dedicated Zaperon team.", "Deployment: every deployment is guided by a dedicated Zaperon team."),
-  // HOLD: "Get Your Assessment" / readiness assessment offer. Offer not confirmed.
-};
-
-/* ------------------------------------------------------------------ */
-/* 15. FAQ                                                             */
+/* 9. FAQ                                                              */
 /* ------------------------------------------------------------------ */
 export type FaqItem = { q: string; a: string };
 export const faq = {
   eyebrow: "FAQ",
   h2: "Frequently asked questions",
   items: [
-    // VALIDATE: Copilot.
-    check<FaqItem>(
-      {
-        q: "What is Zaperon?",
-        a: "Zaperon is an identity-centric security platform for zero trust access and data loss prevention. It verifies the person and their device, then uses that same trust to control which apps they can reach and what data can leave, including into AI tools like ChatGPT and Copilot.",
-      },
-      "FAQ, What is Zaperon: Copilot support.",
-    ),
-    // VALIDATE: SSE differentiation.
-    check<FaqItem>(
-      {
-        q: "How is Zaperon different from traditional SSE?",
-        a: "Many SSE tools enforce policy on network and web traffic and take identity and device context from separate products. Zaperon verifies the person and the device itself, and its data rules can use the same user and device conditions as its access rules.",
-      },
-      "FAQ, different from traditional SSE: data rules use the same user and device conditions as access rules.",
-    ),
-    // HOLD: until Entra ID and Okta coexistence is confirmed.
-    { status: "hold", value: { q: "Do we need to replace our identity provider?", a: "" }, validate: "Entra ID and Okta coexistence not confirmed." } as Claim<FaqItem>,
-    ok<FaqItem>({
+    {
+      q: "What is Zaperon?",
+      a: "Zaperon is an identity-centric Security Service Edge (SSE) platform for zero trust access, data loss prevention, web security and AI security. It verifies the person and their device, then applies that trust to the apps they open, the sites they visit, the files they share, and the AI tools and agents they use.",
+    },
+    {
+      q: "How is Zaperon different from traditional SSE?",
+      a: "Zaperon includes its own identity layer (SSO, MFA and passwordless sign-in) and checks device posture itself. Its access, data and AI rules use that same identity and device context from one console, so you don't stitch together separate identity, DLP and AI security tools.",
+    },
+    {
       q: "Does it work on personal laptops?",
-      a: "Yes. A personal device is registered, then checked against your standards before it can access anything. Devices that aren't registered are blocked.",
-    }),
-    // VALIDATE: what the app collects on personal devices.
-    check<FaqItem>(
-      {
-        q: "What does the app see on a personal device?",
-        a: "Device health signals such as encryption, OS version and antivirus status, plus the data actions your rules cover.",
-      },
-      "FAQ, personal device visibility: exactly what the Zaperon app collects on a personal device.",
-    ),
-    ok<FaqItem>({
+      a: "Yes. You decide which applications allow personal devices. Each personal laptop or phone runs the Zaperon client and is assigned to its user, and work data stays in a secure container, separate from personal data. Unassigned devices are blocked, even with valid credentials.",
+    },
+    {
       q: "Can Zaperon replace our VPN?",
-      a: "Yes. People reach specific apps, servers and network devices instead of the whole network, and you can move one group of apps at a time.",
-    }),
-    ok<FaqItem>({
-      q: "How does it handle AI tools?",
-      a: "It shows which AI tools people use. On supported tools, it can limit use to company accounts and inspect prompts and file uploads for sensitive data. You choose whether to allow, warn or block.",
-    }),
-    // VALIDATE: data at rest in SaaS.
-    check<FaqItem>(
-      {
-        q: "What about data already stored in our SaaS apps?",
-        a: "Zaperon controls data as people move it: uploads, downloads, email, devices and AI prompts.",
-      },
-      "FAQ, data stored in SaaS apps: scope of data-in-motion controls.",
-    ),
-    // HOLD: SIEM export not confirmed.
-    { status: "hold", value: { q: "Can we send events to our SIEM?", a: "" }, validate: "SIEM export not confirmed." } as Claim<FaqItem>,
-    // VALIDATE: SOC 2 Type I or Type II, report date.
-    check<FaqItem>({ q: "Is Zaperon SOC 2 compliant?", a: "Yes." }, "FAQ, SOC 2: Type I or Type II, and the report date."),
-    // HOLD: data hosting location not confirmed.
-    { status: "hold", value: { q: "Where is our data hosted?", a: "" }, validate: "Data hosting regions not confirmed." } as Claim<FaqItem>,
-  ],
+      a: "Yes. Built-in ZTNA gives people secure access to the apps, servers and network devices they need from any location, without exposing your network to VPN vulnerabilities.",
+    },
+    {
+      q: "Will this disrupt our users?",
+      a: "Rollouts follow four phases: map data flows, pilot policies with one group, roll out, then refine. AI rules can log or warn before they block, so legitimate work keeps moving.",
+    },
+    {
+      q: "How does it handle AI tools like ChatGPT, Gemini and Claude?",
+      a: "Zaperon discovers which AI tools people use, including copilots, browser extensions and custom agents. It can allow company workspaces and block personal accounts, inspect prompts, uploads and clipboard activity for sensitive data, and log, warn, redact or block.",
+    },
+    {
+      q: "Can Zaperon secure AI agents?",
+      a: "Yes. Zaperon discovers AI agents on endpoints and lets only administrator-approved agents run. Its Agentic AI Gateway extends identity, authorization and runtime controls to agents: a unique identity for each agent, permissions that narrow as work passes between agents, checks on tool calls, and human approval for high-risk actions.",
+    },
+    {
+      q: "Does Zaperon help with compliance?",
+      a: "Zaperon's access controls, device checks, data protection and audit trails support DPDP-related security and audit workflows, and its logs help with investigations and compliance reporting. Zaperon is SOC 2 compliant; details are on our security and compliance page.",
+    },
+  ] satisfies FaqItem[],
+};
+
+/** FAQPage structured data, built from the same items the page shows. */
+export const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faq.items.map((it) => ({
+    "@type": "Question",
+    name: it.q,
+    acceptedAnswer: { "@type": "Answer", text: it.a },
+  })),
 };
 
 /* ------------------------------------------------------------------ */
-/* 16. Final CTA                                                       */
+/* 10. Final CTA                                                       */
 /* ------------------------------------------------------------------ */
 export const finalCta = {
-  h2: "See who gets in and what gets out, in your own environment",
-  line: "In 30 minutes, we'll show how Zaperon handles a trusted login, an unknown laptop and an AI prompt, using your apps as the example.",
-  primary: "Book a demo",
-  secondary: { label: "Security and compliance details", href: "/security/" },
-  trustLine: proofBar.trustLine,
+  h2: "Put Zaperon to the test on your own apps and devices",
+  body: "Bring your hardest scenario: a contractor's laptop, a sensitive repository, an AI agent your team wants to deploy. We'll show you how Zaperon handles it.",
+  primary: { label: "Book a demo", href: LINKS.contact },
+  secondary: { label: "Security and compliance details", href: LINKS.compliance },
+  trustLine,
 };
 
 /* ------------------------------------------------------------------ */
-/* 17. Footer                                                          */
+/* Solutions (nav and footer links to the use-case pages)             */
+/* ------------------------------------------------------------------ */
+const UC = "https://www.zaperon.com/solutions/";
+export const solutions = [
+  { id: "vpn", icon: "route", label: "Replace VPN access", href: `${UC}replace-legacy-vpn` },
+  { id: "byod", icon: "laptop", label: "Secure contractors and personal laptops", href: `${UC}secure-byod-access` },
+  { id: "data", icon: "code", label: "Protect source code and designs", href: `${UC}prevent-data-leakage` },
+  { id: "ai", icon: "chat", label: "Adopt AI without leaking data", href: `${UC}monitor-ai-interactions` },
+  { id: "ato", icon: "key", label: "Stop account takeover", href: `${UC}prevent-account-takeover` },
+  { id: "audit", icon: "clipboard", label: "Show auditors who accessed what", href: `${UC}ensure-regulatory-compliance` },
+];
+
+/* ------------------------------------------------------------------ */
+/* 11. Footer                                                          */
 /* ------------------------------------------------------------------ */
 export const footer = {
-  tagline: "Identity-centric zero trust access and data protection. Control who gets in, and what data gets out.",
-  // VALIDATE: SOC 2 report type (Type I or Type II) and period.
-  soc2: check("SOC 2", "Footer SOC 2 badge: confirm Type I vs Type II and the audit period."),
+  tagline:
+    "Identity-centric SSE for access, data protection and AI governance. Control who gets in, and what data gets out.",
+  platform: modules.items.map((m) => ({ label: m.name, href: m.href })),
+  soc2: "SOC 2",
+  compliance: { label: "Security and compliance details", href: LINKS.compliance },
+  privacy: { label: "Privacy", href: LINKS.privacy },
+  entities: ["Zaperon, Inc. (US)", "Finlock Technologies (India)"],
 };
 
 /* ------------------------------------------------------------------ */
-/* Structured data                                                     */
+/* SEO                                                                 */
 /* ------------------------------------------------------------------ */
 export const seo = {
-  title: "Zaperon | Zero Trust Access and Data Loss Prevention (SSE)",
+  title: "Zaperon | Zero Trust Access, DLP and AI Agent Security",
   description:
-    "Zaperon verifies every user and device, then controls what data can leave, including into AI tools. Zero trust access and DLP in one platform.",
+    "Zaperon verifies every user, device and AI agent, then controls what data leaves. Zero trust access, DLP and AI security in one platform.",
   /** SoftwareApplication description = the "What is Zaperon?" answer. */
-  appDescription: faq.items[0].value.a,
+  appDescription: faq.items[0].a,
 };
-
-/* ------------------------------------------------------------------ */
-/* Removed from the homepage in v4 (kept for reference)               */
-/* ------------------------------------------------------------------ */
-// HOLD: "~40% lower IT security costs" card. Removed from the homepage by the v4 brief.
-// HOLD: SOC 2 in the hero trust list. Moved to the footer (and FAQ).
-// HOLD: "Example policy" banner (contractor / CRM). Replaced by the Difference section.
-// HOLD: Platform capability tabs incl. "Extension" badge on AI and "one policy engine". Replaced by the two pillars.
-// HOLD: AI copy about controlling custom agents' access. The brief removes any claim that Zaperon controls AI agents.
-
-/* ------------------------------------------------------------------ */
-/* Review register                                                     */
-/* ------------------------------------------------------------------ */
-/** Every needs-validation claim above, for the ?review=1 panel. */
-export const reviewRegister: string[] = [
-  hero.videoEmbedUrl,
-  ...simulator.scenarios,
-  proofBar.trustLine,
-  ...difference.points,
-  difference.panel,
-  ...demoStrip.cards,
-  ...pillarData.tabs,
-  ...aiSpotlight.points,
-  aiSpotlight.demo.companyVerdict,
-  ...comparison.rows,
-  ...customerProof.quotes,
-  ...deployment.steps,
-  deployment.guided,
-  ...faq.items,
-  footer.soc2,
-]
-  .filter((c) => c.status === "needs-validation" && c.validate)
-  .map((c) => c.validate!);

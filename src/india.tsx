@@ -1,10 +1,14 @@
 import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
+import { createRoot, hydrateRoot } from "react-dom/client";
 import "./index.css";
 import { IndiaPage } from "./pages/India";
 
-createRoot(document.getElementById("root")!).render(
+const root = document.getElementById("root")!;
+const app = (
   <StrictMode>
     <IndiaPage />
-  </StrictMode>,
+  </StrictMode>
 );
+// Production pages are prerendered (scripts/prerender.mjs): hydrate them. The dev server renders from scratch.
+if (root.hasChildNodes()) hydrateRoot(root, app);
+else createRoot(root).render(app);

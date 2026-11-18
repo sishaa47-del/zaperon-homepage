@@ -2,12 +2,10 @@ import { useState } from "react";
 import { Icon } from "./Icon";
 import { HeroVisual } from "./HeroVisual";
 import { VideoModal } from "./VideoModal";
-import { useSite } from "../context";
 import { hero } from "../content/homepage";
 import "../styles/hero.css";
 
 export function Hero() {
-  const { openForm } = useSite();
   const [video, setVideo] = useState(false);
   return (
     <section className="hero on-dark" id="top" aria-labelledby="hero-title">
@@ -20,18 +18,22 @@ export function Hero() {
           </h1>
           <p className="hero__lead">{hero.subhead}</p>
           <div className="hero__ctas">
-            <button type="button" className="btn btn--accent btn--lg" data-cta="hero-primary" onClick={() => openForm("demo")}>
-              {hero.primaryCta} <Icon name="arrowRight" size={18} />
-            </button>
-            <button
-              type="button"
+            <a className="btn btn--accent btn--lg" href={hero.primaryCta.href} data-cta="hero-primary">
+              {hero.primaryCta.label} <Icon name="arrowRight" size={18} />
+            </a>
+            {/* The one video link in the hero. Without JavaScript it opens the video on YouTube. */}
+            <a
               className="btn btn--ghost-dark btn--lg"
+              href={hero.videoWatchUrl}
               data-cta="hero-video"
               aria-haspopup="dialog"
-              onClick={() => setVideo(true)}
+              onClick={(e) => {
+                e.preventDefault();
+                setVideo(true);
+              }}
             >
               <Icon name="play" size={18} /> {hero.videoCta}
-            </button>
+            </a>
           </div>
           <p className="hero__audience">{hero.audience}</p>
         </div>

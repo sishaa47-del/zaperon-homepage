@@ -516,3 +516,186 @@
     radial-gradient(50% 60% at 50% 50%, rgb(0 83 250 / 0.3), transparent 70%),
     var(--navy);
 }
+
+/* ---------- v7 simulator: person + chips, verdict, actions, native details ---------- */
+.hv__body {
+  animation: hvIn 0.24s var(--ease) both;
+}
+.hv__who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fafbfd;
+}
+.hv__who > span:not(.hv__avatar) strong {
+  display: block;
+  font-size: 0.9rem;
+  line-height: 1.25;
+}
+.hv__who > span:not(.hv__avatar) span {
+  display: block;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+.hv__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto;
+}
+.hv__chip {
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  font-size: 0.76rem;
+  font-weight: 500;
+  color: var(--ink-2);
+  background: #fff;
+  white-space: nowrap;
+}
+.hv__chip.is-pass {
+  color: var(--ok-ink);
+  background: var(--ok-soft);
+  border-color: var(--ok-line);
+}
+.hv__chip.is-fail {
+  color: #b42325;
+  background: var(--deny-soft);
+  border-color: var(--deny-line);
+}
+.hv__chip.is-unknown {
+  color: var(--warn);
+  background: var(--warn-soft);
+  border-color: var(--warn-line);
+}
+.hv__chip.is-skip {
+  color: var(--muted);
+  border-style: dashed;
+}
+.hv__verdict {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: var(--radius);
+  border: 1px solid var(--ok-line);
+  background: var(--ok-soft);
+}
+.hv__verdict.tone-deny {
+  border-color: var(--deny-line);
+  background: var(--deny-soft);
+}
+.hv__badge {
+  justify-self: start;
+  font-weight: 600;
+  font-size: 0.86rem;
+  background: #fff;
+}
+.hv__reason {
+  font-size: 0.86rem;
+  color: var(--ink-2);
+}
+.hv__check.is-unknown {
+  background: var(--warn-soft);
+  color: var(--warn);
+  font-weight: 500;
+}
+.hv__check.is-unknown .hv__check-icon {
+  background: var(--warn);
+  border-color: var(--warn);
+}
+.hv__check.is-skip {
+  color: var(--muted);
+}
+.hv__check.is-skip .hv__check-icon {
+  color: var(--muted);
+  border-style: dashed;
+}
+.hv__details summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 6px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  list-style: none;
+}
+.hv__details summary::-webkit-details-marker {
+  display: none;
+}
+.hv__details summary:hover {
+  background: var(--accent-soft);
+}
+.hv__details summary svg {
+  transition: transform 0.2s ease-out;
+}
+.hv__details[open] summary svg {
+  transform: rotate(180deg);
+}
+.hv__details-hide,
+.hv__details[open] .hv__details-show {
+  display: none;
+}
+.hv__details[open] .hv__details-hide {
+  display: inline;
+}
+.hv__details-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 12px;
+}
+@media (max-width: 560px) {
+  .hv__details-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .hv__chips {
+    margin-left: 0;
+  }
+}
+/* Mobile: keep the hero short so the H1, subhead and primary button fit the first screen. */
+@media (max-width: 767px) {
+  .hero {
+    padding-top: 24px;
+    padding-bottom: 40px;
+  }
+  .hero .eyebrow {
+    margin-bottom: 10px;
+    font-size: 0.7rem;
+  }
+  .hero h1 {
+    font-size: 2rem;
+  }
+  .hero__lead {
+    margin-top: 14px;
+    font-size: 0.97rem;
+  }
+  .hero__ctas {
+    margin-top: 20px;
+    gap: 10px;
+  }
+  .hero__audience {
+    margin-top: 18px;
+    padding-top: 14px;
+  }
+  .hero__inner {
+    gap: 28px;
+  }
+}
+.video-modal__slot a {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}

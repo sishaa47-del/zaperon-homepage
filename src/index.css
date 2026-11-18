@@ -19,7 +19,7 @@
   --ink: #0b3558; /* dark-blue-500: brand secondary */
   --ink-2: #404040; /* grayscale-800 */
   --muted: #616161; /* grayscale-700 */
-  --faint: #828282; /* grayscale-600 */
+  --faint: #6b6b6b; /* darker than grayscale-600 so small labels pass WCAG AA (4.9:1 on #f5f5f5) */
 
   /* Brand accent: Zaperon blue */
   --accent: #003fb9; /* blue-500: brand primary */
@@ -84,6 +84,7 @@
 html {
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
+  /* Anchors land below the sticky header. */
   scroll-padding-top: calc(var(--nav-h) + 16px);
 }
 body {
@@ -225,13 +226,6 @@ ol {
   text-transform: uppercase;
   color: var(--accent);
   margin-bottom: 16px;
-}
-.eyebrow::before {
-  content: "";
-  width: 18px;
-  height: 2px;
-  border-radius: 2px;
-  background: currentColor;
 }
 
 /* ---------- Buttons ---------- */
@@ -387,43 +381,18 @@ ol {
   border: 1.5px solid currentColor;
 }
 
-/* Claim-validation flags: hidden in normal view, shown with ?review=1 */
-html:not(.review-mode) .flag {
-  display: none !important;
-}
-.review-mode .flag {
-  display: inline-flex !important;
-  align-items: center;
-  gap: 4px;
-  margin-left: 6px;
-  padding: 1px 7px;
-  border-radius: 4px;
-  background: #fff3a8;
-  color: #6b4e00;
-  border: 1px dashed #c9a400;
-  font-family: var(--font-mono);
-  font-size: 0.68rem;
-  font-weight: 500;
-  letter-spacing: 0;
-  text-transform: none;
-  vertical-align: middle;
-  line-height: 1.6;
-  cursor: help;
-  white-space: nowrap;
-}
 
 /* ---------- Scroll reveal ---------- */
-.reveal {
-  opacity: 0;
-  transform: translateY(18px);
-  transition:
-    opacity 0.7s var(--ease),
-    transform 0.7s var(--ease);
-  transition-delay: var(--reveal-delay, 0ms);
+/* Scroll reveal. Content is fully visible by default (no JS, crawlers, screenshots).
+   The animation runs only when Reveal adds .is-entering as the element scrolls in. */
+.reveal.is-entering {
+  animation: revealIn 0.45s ease-out var(--reveal-delay, 0ms) both;
 }
-.reveal.is-visible {
-  opacity: 1;
-  transform: none;
+@keyframes revealIn {
+  from {
+    opacity: 0.9;
+    transform: translateY(10px);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -437,9 +406,8 @@ html:not(.review-mode) .flag {
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
   }
-  .reveal {
-    opacity: 1;
-    transform: none;
+  .reveal.is-entering {
+    animation: none;
   }
 }
 
