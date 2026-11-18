@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "./Icon";
 import { Reveal } from "./Reveal";
-import { useAutoCycle, useInView, usePrefersReducedMotion } from "../hooks/useInView";
+import { useAutoCycle, useInView, useMounted, usePrefersReducedMotion } from "../hooks/useInView";
 import { onTabKeyDown } from "../hooks/tabKeys";
 import { workday as W } from "../content/homepage";
 
@@ -11,7 +11,8 @@ const MODES: Mode[] = ["without", "with"];
 /** Section 5: one compact row of six workday steps with a Without / With toggle. */
 export function Workday() {
   const [mode, setMode] = useState<Mode>("with");
-  const ref = useRef<HTMLOListElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  const mounted = useMounted();
   const inView = useInView(ref, { threshold: 0.5 });
   const reduced = usePrefersReducedMotion();
   // The bar is drawn in the static HTML; it replays when the strip comes into view or "With" is chosen.
@@ -72,18 +73,28 @@ export function Workday() {
           ))}
         </div>
 
-        <ol ref={ref} className={`wd__strip is-${mode} ${drawn ? "is-drawn" : ""}`} aria-live="polite">
+        {/* Before hydration (and without JavaScript) both sides show, each labelled. */}
+        <div ref={ref} className={`wd__track is-${mode} ${drawn ? "is-drawn" : ""} ${mounted ? "" : "is-static"}`}>
           <span className="wd__bar" aria-hidden="true" />
-          {W.steps.map((s, i) => (
-            <li key={s.step} className="wd__step" style={{ transitionDelay: `${i * 90}ms` }}>
-              <span className="wd__dot" aria-hidden="true">
-                <Icon name={mode === "with" ? "check" : "minus"} size={12} strokeWidth={2.5} />
-              </span>
-              <strong>{s.step}</strong>
-              <span className="wd__text">{mode === "with" ? s.with : s.without}</span>
-            </li>
-          ))}
-        </ol>
+          <ol className="wd__strip" aria-live="polite">
+            {W.steps.map((s, i) => (
+              <li key={s.step} className="wd__step" style={{ transitionDelay: `${i * 90}ms` }}>
+                <span className="wd__dot" aria-hidden="true">
+                  <Icon name={mode === "with" ? "check" : "minus"} size={12} strokeWidth={2.5} />
+                </span>
+                <strong>{s.step}</strong>
+                <span className="wd__text wd__text--without">
+                  <span className="wd__side">{W.toggle.without}: </span>
+                  {s.without}
+                </span>
+                <span className="wd__text wd__text--with">
+                  <span className="wd__side">{W.toggle.with}: </span>
+                  {s.with}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
         </div>
 
         <p className="wd__line">

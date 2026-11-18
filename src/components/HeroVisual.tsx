@@ -28,8 +28,13 @@ export function HeroVisual() {
   const tabsRef = useRef<HTMLDivElement>(null);
   const picked = useRef(false);
   const rootRef = useRef<HTMLDivElement>(null);
-  const advance = useCallback(() => setIdx((i) => (i + 1) % SCENARIOS.length), []);
-  const auto = useAutoCycle(rootRef, advance, { ms: 4000, step: idx });
+  // The opening tab (Company laptop on desktop, Failing checks on mobile) holds longer before auto-play starts.
+  const [cycled, setCycled] = useState(false);
+  const advance = useCallback(() => {
+    setCycled(true);
+    setIdx((i) => (i + 1) % SCENARIOS.length);
+  }, []);
+  const auto = useAutoCycle(rootRef, advance, { ms: cycled ? 4000 : 7000, step: idx });
 
   useEffect(() => {
     if (!picked.current && window.matchMedia("(max-width: 767px)").matches) setIdx(simulator.defaultTab.mobile);

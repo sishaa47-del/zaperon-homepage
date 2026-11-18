@@ -500,16 +500,18 @@
   font-weight: 600;
   box-shadow: var(--shadow-1);
 }
-.wd__strip {
+.wd__track {
   --dot: 24px;
   position: relative;
+  margin-top: 32px;
+}
+.wd__strip {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 16px;
-  margin-top: 32px;
 }
 /* Thin line joining the steps, and the bar that runs along it on "With". */
-.wd__strip::before,
+.wd__track::before,
 .wd__bar {
   content: "";
   position: absolute;
@@ -525,7 +527,7 @@
   transform: scaleX(0);
   transition: transform 1.4s var(--ease);
 }
-.wd__strip.is-with.is-drawn .wd__bar {
+.wd__track.is-with.is-drawn .wd__bar {
   transform: scaleX(1);
 }
 .wd__step {
@@ -549,7 +551,7 @@
     border-color 0.3s,
     color 0.3s;
 }
-.wd__strip.is-with.is-drawn .wd__dot {
+.wd__track.is-with.is-drawn .wd__dot {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
@@ -563,8 +565,23 @@
 .wd__text {
   color: var(--muted);
 }
-.wd__strip.is-with .wd__text {
+.wd__track.is-with .wd__text {
   color: var(--ink-2);
+}
+/* Interactive: only the selected side shows. Static (no JS): both, labelled. */
+.wd__side {
+  display: none;
+}
+.wd__track:not(.is-static).is-with .wd__text--without,
+.wd__track:not(.is-static).is-without .wd__text--with {
+  display: none;
+}
+.wd__track.is-static .wd__side {
+  display: inline;
+  font-weight: 600;
+}
+.wd__track.is-static .wd__text--without {
+  color: var(--muted);
 }
 .wd__line {
   margin-top: 32px;
@@ -580,7 +597,7 @@
     grid-template-columns: minmax(0, 1fr);
     gap: 18px;
   }
-  .wd__strip::before,
+  .wd__track::before,
   .wd__bar {
     top: calc(var(--dot) / 2);
     bottom: calc(var(--dot) / 2);
@@ -593,7 +610,7 @@
     transform-origin: top;
     transform: scaleY(0);
   }
-  .wd__strip.is-with.is-drawn .wd__bar {
+  .wd__track.is-with.is-drawn .wd__bar {
     transform: scaleY(1);
   }
   .wd__step {

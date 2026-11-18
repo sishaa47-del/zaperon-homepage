@@ -38,7 +38,7 @@ const MENUS: Menu[] = [
     ],
     feature: {
       kicker: "Case study",
-      title: "Why a ₹1,000 crore manufacturer chose Zaperon to secure its data",
+      title: "How a 1,000-user manufacturer protects designs and source code",
       href: LINKS.mfgCaseStudy,
       cta: "Read the case study",
     },

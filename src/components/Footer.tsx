@@ -20,7 +20,6 @@ const COLS: { title: string; links: L[] }[] = [
   {
     title: "Company",
     links: [
-      { label: "Zaperon in India", href: "/india/" },
       { label: "Partners", href: LINKS.partners },
       { label: "Contact", href: LINKS.contact },
       { label: "Seed funding news", href: LINKS.seedNews },
