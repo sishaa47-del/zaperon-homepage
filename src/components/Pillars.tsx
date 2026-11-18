@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon, type IconName } from "./Icon";
 import { Reveal } from "./Reveal";
-import { useMounted } from "../hooks/useInView";
+import { useAutoCycle, useMounted } from "../hooks/useInView";
 import { onTabKeyDown } from "../hooks/tabKeys";
 import { modules as M } from "../content/homepage";
 import "../styles/capabilities.css";
@@ -28,6 +28,14 @@ export function Platform() {
   }, []);
 
   const tabs = mounted && desktop;
+  // Desktop tabs auto-advance while in view, until the visitor picks a module.
+  const gridRef = useRef<HTMLDivElement>(null);
+  const advance = useCallback(() => setIdx((i) => (i + 1) % M.items.length), []);
+  const auto = useAutoCycle(gridRef, advance, { ms: 5000, enabled: tabs, step: idx });
+  const pickTab = (i: number) => {
+    auto.stop();
+    setIdx(i);
+  };
   const shown = (i: number) => !mounted || (tabs ? i === idx : i === open);
 
   return (
@@ -38,7 +46,7 @@ export function Platform() {
           <h2 id="mods-title">{M.h2}</h2>
         </Reveal>
 
-        <div className={`mods__grid ${tabs ? "is-tabs" : "is-accordion"}`}>
+        <div ref={gridRef} className={`mods__grid ${tabs ? "is-tabs" : "is-accordion"}`}>
           <div className="mods__list" role={tabs ? "tablist" : undefined} aria-label={tabs ? M.h2 : undefined} aria-orientation={tabs ? "vertical" : undefined}>
             {M.items.map((m, i) => (
               <button
@@ -54,8 +62,8 @@ export function Platform() {
                       role: "tab",
                       "aria-selected": i === idx,
                       tabIndex: i === idx ? 0 : -1,
-                      onClick: () => setIdx(i),
-                      onKeyDown: (e) => onTabKeyDown(e, i, M.items.length, setIdx),
+                      onClick: () => pickTab(i),
+                      onKeyDown: (e) => onTabKeyDown(e, i, M.items.length, pickTab),
                     }
                   : { "aria-expanded": shown(i), onClick: () => setOpen(open === i ? null : i) })}
               >

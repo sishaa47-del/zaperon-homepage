@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "./Icon";
 import { Reveal } from "./Reveal";
-import { useInView, useMounted, usePrefersReducedMotion } from "../hooks/useInView";
+import { useAutoCycle, useInView, useMounted, usePrefersReducedMotion } from "../hooks/useInView";
 import { onTabKeyDown } from "../hooks/tabKeys";
 import { aiSecurity as A } from "../content/homepage";
 
@@ -42,10 +42,18 @@ function useSequence(total: number, stepMs: number, active: boolean, run: number
   return { ref, n, done: n >= total };
 }
 
-function PromptDemo({ active }: { active: boolean }) {
+function PromptDemo({
+  active,
+  account,
+  run,
+  onChoose,
+}: {
+  active: boolean;
+  account: Account;
+  run: number;
+  onChoose: (a: Account) => void;
+}) {
   const p = D.prompt;
-  const [account, setAccount] = useState<Account>("personal");
-  const [run, setRun] = useState(0);
   // Typing: 2 characters per tick; then one tick per detected item, then the result.
   const typeTicks = Math.ceil(p.text.length / 2);
   const total = typeTicks + p.chips.length + 1;
@@ -54,10 +62,7 @@ function PromptDemo({ active }: { active: boolean }) {
   const found = Math.max(0, Math.min(p.chips.length, n - typeTicks));
   const blocked = account === "personal";
 
-  const choose = (i: number) => {
-    setAccount(ACCOUNTS[i]);
-    setRun((r) => r + 1);
-  };
+  const choose = (i: number) => onChoose(ACCOUNTS[i]);
 
   return (
     <div className="aid__pane" ref={ref}>
@@ -116,9 +121,8 @@ function PromptDemo({ active }: { active: boolean }) {
 const D_REDACT = A.decisions[1];
 const D_BLOCK = A.decisions[2];
 
-function AgentDemo({ active }: { active: boolean }) {
+function AgentDemo({ active, run, onReplay }: { active: boolean; run: number; onReplay: () => void }) {
   const g = D.agent;
-  const [run, setRun] = useState(0);
   const { ref, n, done } = useSequence(g.steps.length + 1, 650, active, run);
   return (
     <div className="aid__pane" ref={ref}>
@@ -146,7 +150,7 @@ function AgentDemo({ active }: { active: boolean }) {
         )}
       </div>
       {done && (
-        <button type="button" className="aid__replay" data-interaction="ai-demo-agent-replay" onClick={() => setRun((r) => r + 1)}>
+        <button type="button" className="aid__replay" data-interaction="ai-demo-agent-replay" onClick={onReplay}>
           <Icon name="refresh" size={14} /> Replay
         </button>
       )}
@@ -154,12 +158,45 @@ function AgentDemo({ active }: { active: boolean }) {
   );
 }
 
+/** Auto-play order: personal account, company workspace, agent action. */
+const STEPS: { tab: Tab; account: Account }[] = [
+  { tab: "prompt", account: "personal" },
+  { tab: "prompt", account: "company" },
+  { tab: "agent", account: "personal" },
+];
+
 function Demo() {
   const [tab, setTab] = useState<Tab>("prompt");
+  const [account, setAccount] = useState<Account>("personal");
+  const [promptRun, setPromptRun] = useState(0);
+  const [agentRun, setAgentRun] = useState(0);
   const mounted = useMounted();
-  const choose = (i: number) => setTab(TABS[i]);
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  const go = (t: Tab, a: Account) => {
+    setTab(t);
+    if (t === "prompt") {
+      setAccount(a);
+      setPromptRun((r) => r + 1);
+    } else setAgentRun((r) => r + 1);
+  };
+  const step = STEPS.findIndex((s) => s.tab === tab && (tab === "agent" || s.account === account));
+  const advance = useCallback(() => {
+    const next = STEPS[(step + 1) % STEPS.length];
+    setTab(next.tab);
+    if (next.tab === "prompt") {
+      setAccount(next.account);
+      setPromptRun((r) => r + 1);
+    } else setAgentRun((r) => r + 1);
+  }, [step]);
+  const auto = useAutoCycle(boxRef, advance, { ms: 6000, step: `${tab}-${account}` });
+
+  const choose = (i: number) => {
+    auto.stop();
+    go(TABS[i], account);
+  };
   return (
-    <div className="aid">
+    <div className="aid" ref={boxRef}>
       <div className="aid__bar">
         <div className="aid__tabs" role="tablist" aria-label="AI security demo">
           {TABS.map((t, i) => (
@@ -183,10 +220,18 @@ function Demo() {
       </div>
       {/* Before hydration (and without JavaScript) both panels show. */}
       <div id="aid-panel-prompt" role="tabpanel" aria-labelledby="aid-tab-prompt" hidden={mounted && tab !== "prompt"}>
-        <PromptDemo active={tab === "prompt"} />
+        <PromptDemo
+          active={tab === "prompt"}
+          account={account}
+          run={promptRun}
+          onChoose={(a) => {
+            auto.stop();
+            go("prompt", a);
+          }}
+        />
       </div>
       <div id="aid-panel-agent" role="tabpanel" aria-labelledby="aid-tab-agent" hidden={mounted && tab !== "agent"}>
-        <AgentDemo active={tab === "agent"} />
+        <AgentDemo active={tab === "agent"} run={agentRun} onReplay={() => setAgentRun((r) => r + 1)} />
       </div>
     </div>
   );

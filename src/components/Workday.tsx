@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "./Icon";
 import { Reveal } from "./Reveal";
-import { useInView, usePrefersReducedMotion } from "../hooks/useInView";
+import { useAutoCycle, useInView, usePrefersReducedMotion } from "../hooks/useInView";
 import { onTabKeyDown } from "../hooks/tabKeys";
 import { workday as W } from "../content/homepage";
 
@@ -30,9 +30,20 @@ export function Workday() {
     };
   }, [mode, inView, reduced, run]);
 
+  const select = useCallback(
+    (m: Mode) => {
+      if (m === "with" && mode !== "with") setRun((r) => r + 1);
+      setMode(m);
+    },
+    [mode],
+  );
+  // Alternates Without / With while in view, until the visitor picks one.
+  const boxRef = useRef<HTMLDivElement>(null);
+  const advance = useCallback(() => select(mode === "with" ? "without" : "with"), [mode, select]);
+  const auto = useAutoCycle(boxRef, advance, { ms: 4500, step: mode });
   const choose = (i: number) => {
-    if (MODES[i] === "with" && mode !== "with") setRun((r) => r + 1);
-    setMode(MODES[i]);
+    auto.stop();
+    select(MODES[i]);
   };
 
   return (
@@ -43,6 +54,7 @@ export function Workday() {
           <p>{W.intro}</p>
         </Reveal>
 
+        <div ref={boxRef}>
         <div className="wd__switch" role="radiogroup" aria-label="Compare a workday">
           {MODES.map((m, i) => (
             <button
@@ -72,6 +84,7 @@ export function Workday() {
             </li>
           ))}
         </ol>
+        </div>
 
         <p className="wd__line">
           {W.lineLead}{" "}

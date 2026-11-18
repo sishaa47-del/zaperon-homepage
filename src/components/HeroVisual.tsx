@@ -1,13 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Icon } from "./Icon";
-import { usePrefersReducedMotion } from "../hooks/useInView";
+import { useAutoCycle, usePrefersReducedMotion } from "../hooks/useInView";
 import { keepTabVisible, onTabKeyDown } from "../hooks/tabKeys";
 import { simulator, type ChipState, type Outcome } from "../content/homepage";
 
 /**
  * Interactive access simulator (Illustrative UI, fictional data).
  * One person, one resource. Each device tab updates the chips, the decision,
- * the reason line and the three action rows. No autoplay.
+ * the reason line and the three action rows. Auto-plays through the tabs while in view,
+ * pauses on hover or focus, and stops once the visitor picks a tab.
  * Desktop opens on "Company laptop", mobile on "Failing checks" (set after mount,
  * so the prerendered HTML and the first client render match).
  */
@@ -26,6 +27,9 @@ export function HeroVisual() {
   const reduced = usePrefersReducedMotion();
   const tabsRef = useRef<HTMLDivElement>(null);
   const picked = useRef(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const advance = useCallback(() => setIdx((i) => (i + 1) % SCENARIOS.length), []);
+  const auto = useAutoCycle(rootRef, advance, { ms: 4000, step: idx });
 
   useEffect(() => {
     if (!picked.current && window.matchMedia("(max-width: 767px)").matches) setIdx(simulator.defaultTab.mobile);
@@ -34,12 +38,13 @@ export function HeroVisual() {
 
   const choose = (i: number) => {
     picked.current = true;
+    auto.stop();
     setIdx(i);
   };
   const s = SCENARIOS[idx];
 
   return (
-    <div className="hv">
+    <div className="hv" ref={rootRef}>
       <div className="hv__tabs" ref={tabsRef} role="tablist" aria-label="Device used for this access request">
         {SCENARIOS.map((sc, i) => (
           <button

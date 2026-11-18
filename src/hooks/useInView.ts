@@ -100,3 +100,48 @@ export function useDrawOnView<T extends Element>(ref: RefObject<T | null>, thres
   }, [ref, reduced, threshold]);
   return drawn;
 }
+
+/**
+ * Auto-advances a tabbed demo every `ms` while it is in view.
+ * Pauses on hover and keyboard focus inside `ref`; `stop()` ends it for good (call on any user choice).
+ * Never runs under reduced motion or when `enabled` is false.
+ */
+export function useAutoCycle<T extends HTMLElement>(
+  ref: RefObject<T | null>,
+  advance: () => void,
+  { ms, enabled = true, step }: { ms: number; enabled?: boolean; step: unknown },
+) {
+  const inView = useInView(ref, { threshold: 0.35 });
+  const reduced = usePrefersReducedMotion();
+  const [stopped, setStopped] = useState(false);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const on = () => setPaused(true);
+    const off = () => setPaused(false);
+    const focusOut = (e: FocusEvent) => {
+      if (!el.contains(e.relatedTarget as Node)) setPaused(false);
+    };
+    el.addEventListener("pointerenter", on);
+    el.addEventListener("pointerleave", off);
+    el.addEventListener("focusin", on);
+    el.addEventListener("focusout", focusOut);
+    return () => {
+      el.removeEventListener("pointerenter", on);
+      el.removeEventListener("pointerleave", off);
+      el.removeEventListener("focusin", on);
+      el.removeEventListener("focusout", focusOut);
+    };
+  }, [ref]);
+
+  useEffect(() => {
+    if (!enabled || stopped || paused || reduced || !inView) return;
+    const t = window.setTimeout(advance, ms);
+    return () => window.clearTimeout(t);
+    // `step` restarts the timer after every change, manual or automatic.
+  }, [enabled, stopped, paused, reduced, inView, ms, step, advance]);
+
+  return { stop: () => setStopped(true), running: enabled && !stopped && !reduced };
+}

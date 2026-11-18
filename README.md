@@ -60,7 +60,9 @@ Extra pages: `/india/` and `/security/` (noindex placeholder, no longer linked).
 
 **Prerendered.** `npm run build` also builds `src/entry-server.tsx` and runs `scripts/prerender.mjs`, which writes each page's HTML into `dist/`. The client hydrates it. Without JavaScript every section, FAQ answer, demo panel and module card is readable.
 
-Reduced motion: no typing, line-draw or bar animation; demos show their final state. Controls carry `data-interaction`; CTAs carry `data-cta`.
+Auto-play: the hero simulator (4s), AI demo (6s), module tabs on desktop (5s) and workday toggle (4.5s) cycle while in view, pause on hover or keyboard focus, and stop for good once the visitor picks something.
+
+Reduced motion: no auto-play, typing, line-draw or bar animation; demos show their final state. Controls carry `data-interaction`; CTAs carry `data-cta`.
 
 ## Content guardrails applied
 
